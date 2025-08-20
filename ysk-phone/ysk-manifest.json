@@ -1,0 +1,12 @@
+{
+  "name": "YSK | عارض البيانات",
+  "short_name": "YSK",
+  "start_url": "./ysk.html",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "./public/YSK PHONE.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./public/YSK PHONE.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

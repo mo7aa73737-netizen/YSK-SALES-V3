@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YSK POS - إدارة التراخيص السحابية</title>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link id="material-icons-link" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" />
+
+  <!-- Firebase Scripts -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3HGYLYLlFf05qPBl23PujqWhr5Z0_Apc",
+      authDomain: "ysk-active-35da4.firebaseapp.com",
+      projectId: "ysk-active-35da4",
+      storageBucket: "ysk-active-35da4.firebasestorage.app",
+      messagingSenderId: "690431684740",
+      appId: "1:690431684740:web:3e861056405d08c73a52d1",
+      measurementId: "G-0R13DT05T7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    class AdvancedFirebaseLicenseManager {
+      constructor() {
+        this.db = db;
+        this.collection = 'ysk_licenses';
+      }
+
+      async uploadLicense(licenseData) {
+        try {
+          const docRef = await addDoc(collection(this.db, this.collection), {
+            code: licenseData.code,
+            customer: licenseData.customer,
+            customerInfo: licenseData.customerInfo || null,
+            type: licenseData.type,
+            durationDays: licenseData.durationDays || null,
+            created: licenseData.created,
+            expires: licenseData.expires,
+            status: 'active',
+            encryptedData: licenseData.encryptedData,
+            timestamp: new Date().toISOString(),
+            activated: false,
+            activationDate: null,
+            lastUsed: null,
+            usageCount: 0
+          });
+          return { success: true, id: docRef.id };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async getLicense(licenseCode) {
+        try {
+          const q = query(collection(this.db, this.collection), where('code', '==', licenseCode));
+          const querySnapshot = await getDocs(q);
+          if (querySnapshot.empty) return { success: false, error: 'كود التفعيل غير موجود' };
+
+          const docData = querySnapshot.docs[0];
+          const data = docData.data();
+
+          await updateDoc(docData.ref, {
+            lastUsed: new Date().toISOString(),
+            usageCount: (data.usageCount || 0) + 1
+          });
+          return { success: true, data, id: docData.id };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async getAllLicenses() {
+        try {
+          const q = query(collection(this.db, this.collection), orderBy('timestamp', 'desc'));
+          const querySnapshot = await getDocs(q);
+          const licenses = [];
+          querySnapshot.forEach((docx) => licenses.push({ id: docx.id, ...docx.data() }));
+          return { success: true, data: licenses };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async deleteLicense(licenseId) {
+        try {
+          await deleteDoc(doc(this.db, this.collection, licenseId));
+          return { success: true };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+    }
+
+    window.advancedFirebaseManager = new AdvancedFirebaseLicenseManager();
+    window.firebaseReady = true;
+    window.dispatchEvent(new Event('firebaseReady'));
+  </script>
+
+  <style>
+    body { font-family: 'Cairo', sans-serif; background: #ffffff; color: #111827; }
+    .glass-card { background: #fff; border: 1px solid #e5e7eb; box-shadow: none; }
+    .active-tab { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe; }
+    .tab-content.hidden { display: none; }
+    .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top: 2px solid #2563eb; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <img src="../public/YSK-SALES.png" alt="YSK POS" class="h-10 w-10" />
+        <div>
+          <h1 class="text-xl font-bold">إدارة تراخيص YSK POS</h1>
+          <p class="text-sm text-gray-500">منصة توليد و��دارة الأكواد السحابية</p>
+        </div>
+      </div>
+      <div id="firebaseStatus" class="flex items-center gap-2 text-xs px-2 py-1 rounded-full border border-blue-200 bg-blue-50">
+        <span class="loading"></span>
+        <span class="text-blue-700">جاري التهيئة...</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="statsSection" class="hidden grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">إجمالي التراخيص</p>
+            <p id="totalLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-blue-600 text-2xl">analytics</span>
+        </div>
+      </div>
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">النشطة حالياً</p>
+            <p id="activeLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-green-600 text-2xl">schedule</span>
+        </div>
+      </div>
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">المنتهية</p>
+            <p id="expiredLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-red-600 text-2xl">block</span>
+        </div>
+      </div>
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">المفعّلة</p>
+            <p id="activatedLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-indigo-600 text-2xl">verified</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-4">
+      <div class="flex bg-blue-50 p-1 rounded-lg">
+        <button onclick="showTab('generate')" id="generateTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition active-tab">توليد ترخيص جديد</button>
+        <button onclick="showTab('manage')" id="manageTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition">إدارة التراخيص</button>
+        <button onclick="showTab('verify')" id="verifyTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition">التحقق من الأكواد</button>
+      </div>
+    </div>
+
+    <!-- Generate Tab -->
+    <div id="generateSection" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Form -->
+        <div class="glass-card rounded-lg p-4">
+          <h2 class="text-lg font-bold mb-4">توليد ترخيص جديد</h2>
+          <form id="licenseForm" class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">اسم العميل</label>
+                <input id="customerName" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="أدخل اسم العميل" required />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">رقم الموبايل/الإيميل</label>
+                <input id="customerContact" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="01xxxxxxxxx أو email@domain.com" required />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">الشركة/المحل (اختياري)</label>
+                <input id="customerCompany" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="اسم الشركة أو المحل" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">العنوان (اختياري)</label>
+                <input id="customerAddress" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="العنوان" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">نوع الترخيص</label>
+                <select id="licenseType" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm">
+                  <option value="trial">تجريبي (30 يوم)</option>
+                  <option value="standard">عادي (سنة واحدة)</option>
+                  <option value="premium">مميز (سنتين)</option>
+                  <option value="lifetime">مدى الحياة</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1 flex items-center gap-1"><span class="material-icons-outlined text-xs">info</span>يمكنك كتابة اسم ن��ع مخصص بالأسفل</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">نوع مخصص (اختياري)</label>
+                <input id="customType" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="مثال: باقة برو سنوية" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">عدد الأيام</label>
+                <input id="durationDays" type="number" min="1" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="مثال: 365" />
+                <p class="text-xs text-gray-500 mt-1">في حال تحديدها سيتم حساب الانتهاء تلقائياً</p>
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-700 mb-1">تاريخ الانتهاء (اختياري)</label>
+                <input id="expiryDate" type="date" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" />
+                <p class="text-xs text-gray-500 mt-1">أو اتركه فارغ ليحسب حسب النوع أو عدد الأ��ام</p>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-700 mb-1">ملاحظات</label>
+              <textarea id="notes" rows="3" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="بيانات إضافية حول العميل أو الترخيص..."></textarea>
+            </div>
+
+            <button type="submit" id="generateBtn" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition font-semibold text-sm flex items-center justify-center gap-2">
+              <span class="material-icons-outlined">key</span>
+              توليد ورفع الترخيص
+            </button>
+          </form>
+        </div>
+
+        <!-- Result -->
+        <div class="glass-card rounded-lg p-4">
+          <h2 class="text-lg font-bold mb-4">نتيجة التوليد</h2>
+
+          <div id="licenseResult" class="hidden space-y-3">
+            <div class="bg-gray-50 p-3 rounded border">
+              <label class="block text-sm font-medium text-gray-700 mb-2">كود التفعيل:</label>
+              <div class="flex items-center">
+                <input id="generatedLicense" type="text" class="flex-1 p-2 border rounded-l bg-white text-gray-800 font-mono text-base text-center" readonly />
+                <button onclick="copyLicense()" class="bg-green-600 text-white px-4 py-2 rounded-r hover:bg-green-700 transition text-sm flex items-center gap-2">
+                  <span class="material-icons-outlined">content_copy</span>
+                  نسخ
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div class="glass-card p-3 rounded">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">العميل:</span>
+                  <span id="resultCustomer" class="font-semibold text-gray-900"></span>
+                </div>
+              </div>
+              <div class="glass-card p-3 rounded">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">نوع الترخيص:</span>
+                  <span id="resultType" class="font-semibold text-blue-700"></span>
+                </div>
+              </div>
+              <div class="glass-card p-3 rounded">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">تاريخ الانتهاء:</span>
+                  <span id="resultExpiry" class="font-semibold text-gray-900"></span>
+                </div>
+              </div>
+              <div class="glass-card p-3 rounded">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">عدد الأيام:</span>
+                  <span id="resultDays" class="font-semibold text-gray-900">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-green-50 border border-green-200 rounded flex items-center gap-2 text-sm text-green-800">
+              <span class="material-icons-outlined">cloud_done</span>
+              <p>تم رفع الكود إلى السحابة بنجاح ويمكن تفعيله من أي مكان</p>
+            </div>
+          </div>
+
+          <div id="noLicense" class="text-center text-gray-500 py-8">
+            <span class="material-icons-outlined text-gray-400 text-5xl">vpn_key</span>
+            <p class="text-sm mt-2">املأ النموذج لتوليد ورفع كود تفعيل</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Tab -->
+    <div id="manageSection" class="tab-content hidden">
+      <div class="glass-card rounded-lg p-4">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold">إدارة التراخيص</h2>
+          <button onclick="refreshLicenses()" class="bg-gray-100 text-gray-800 px-3 py-2 rounded hover:bg-gray-200 transition text-sm flex items-center gap-2">
+            <span class="material-icons-outlined">refresh</span>
+            تحديث القائمة
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-right font-medium text-gray-700">التاريخ</th>
+                <th class="p-2 text-right font-medium text-gray-700">العميل</th>
+                <th class="p-2 text-right font-medium text-gray-700">كود التفعيل</th>
+                <th class="p-2 text-right font-medium text-gray-700">النوع</th>
+                <th class="p-2 text-right font-medium text-gray-700">الحالة</th>
+                <th class="p-2 text-right font-medium text-gray-700">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="licensesList">
+              <tr>
+                <td colspan="6" class="text-center p-6 text-gray-500">جاري تحميل التراخيص...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verify Tab -->
+    <div id="verifySection" class="tab-content hidden">
+      <div class="glass-card rounded-lg p-4">
+        <h2 class="text-lg font-bold mb-3 text-center">التحقق من صحة الكود</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-700 mb-2">كود التفعيل للتحقق:</label>
+            <div class="flex">
+              <input id="verifyLicense" type="text" class="flex-1 p-2 border border-gray-300 rounded-l bg-white text-gray-800 font-mono text-sm" placeholder="YSK-XXXX-XXXX-XXXX-XXXX" />
+              <button onclick="verifyLicense()" class="bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700 transition text-sm flex items-center gap-2">
+                <span class="material-icons-outlined">verified</span>
+                تحقق
+              </button>
+            </div>
+          </div>
+          <div id="verifyResult" class="hidden">
+            <div id="verifyStatus" class="p-3 rounded border"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="simple-firebase-system.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "ysk-license-system",
+  "version": "1.0.0",
+  "description": "نظام إدارة تراخيص YSK POS",
+  "main": "index.html",
+  "scripts": {
+    "dev": "live-server --port=3001",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "keywords": ["license", "activation", "pos", "ysk"],
+  "author": "YSK Systems",
+  "license": "Private"
+}

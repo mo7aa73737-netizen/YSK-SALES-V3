@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>YSK | عارض البيانات</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="/public/YSK PHONE.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <style>
+    :root { --safe-bottom: env(safe-area-inset-bottom); --primary:#2563eb; }
+    html, body { font-family: 'Cairo', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial; background:#f6f7fb; color:#0f172a; }
+    .bottom-nav { position: fixed; bottom: 0; right: 0; left: 0; height: calc(64px + var(--safe-bottom)); padding-bottom: var(--safe-bottom); background: #fff; border-top: 1px solid #e5e7eb; display: grid; grid-template-columns: repeat(5, 1fr); z-index: 40; }
+    .fab { position: fixed; bottom: calc(64px + var(--safe-bottom) + 16px); right: 50%; transform: translateX(50%); background: var(--primary); color: #fff; width: 62px; height: 62px; border-radius: 9999px; display:flex; align-items:center; justify-content:center; box-shadow: 0 6px 16px rgba(0,0,0,.25); z-index: 50; }
+    .active-tab { color: var(--primary); }
+    .tab-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 2px; font-size:12px; color:#6b7280; }
+    .tab-btn .material-symbols-outlined { font-size: 22px; margin-bottom: 2px; }
+    .page { display: none; }
+    .page.active { display:block; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius: 12px; }
+    .scroll { -webkit-overflow-scrolling: touch; }
+    .scan-page { position: fixed; inset: 0; background: #000; color:#fff; display:none; flex-direction:column; z-index: 60; }
+    .scan-page.active { display:flex; }
+    .scan-header { height: 56px; display:flex; align-items:center; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .material-symbols-outlined { vertical-align: middle; }
+    .icon-anim { animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+  </style>
+</head>
+<body class="min-h-screen pb-[100px]">
+  <!-- Header + Search -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200">
+    <div class="max-w-screen-md mx-auto px-4 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <img src="/public/YSK PHONE.png" alt="YSK" class="w-8 h-8 rounded" />
+          <h1 class="text-lg font-bold text-gray-900">YSK | عارض البيانات</h1>
+        </div>
+        <button id="btnTestConnection" class="text-xs bg-gray-100 border border-gray-200 px-2 py-1 rounded hover:bg-gray-200 flex items-center gap-1">
+          <span class="material-symbols-outlined">wifi</span> اختبار الاتصال
+        </button>
+      </div>
+      <div class="mt-3 relative">
+        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+        <input id="globalSearch" type="search" placeholder="بحث شامل (منتجات، عملاء، فواتير، مصاريف...)" class="w-full border rounded-lg p-3 pe-24 ps-10" />
+        <div id="liveHint" class="absolute left-2 bottom-1 text-[10px] text-gray-400"> </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-screen-md mx-auto px-4 py-4">
+    <!-- HOME -->
+    <section id="page-home" class="page active">
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="card p-4">
+          <div class="text-xs text-gray-500">إجمالي المبيعات</div>
+          <div id="kpiTotalSales" class="text-2xl font-extrabold text-gray-900">0.00 ج.م</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-gray-500">المرتجعات</div>
+          <div id="kpiReturns" class="text-2xl font-extrabold text-red-600">0.00 ج.م</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-gray-500">المصاريف</div>
+          <div id="kpiExpenses" class="text-2xl font-extrabold text-orange-600">0.00 ج.م</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-xs text-gray-500">عدد الفواتير</div>
+          <div id="kpiInvoices" class="text-2xl font-extrabold text-gray-900">0</div>
+        </div>
+      </div>
+      <div class="card p-4">
+        <div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined">search</span><h3 class="font-bold">نتائج البحث</h3></div>
+        <div id="searchResults" class="space-y-2 text-sm"></div>
+      </div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="page-products" class="page">
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined">shopping_bag</span><h3 class="font-bold">المنتجات</h3></div>
+          <div class="relative"><span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">search</span><input id="searchProducts" class="border rounded p-2 text-sm ps-9" placeholder="بحث منتجات" /></div>
+        </div>
+        <div id="listProducts" class="divide-y text-sm"></div>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section id="page-customers" class="page">
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined">group</span><h3 class="font-bold">العملاء</h3></div>
+          <div class="relative"><span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">search</span><input id="searchCustomers" class="border rounded p-2 text-sm ps-9" placeholder="بحث عملاء" /></div>
+        </div>
+        <div id="listCustomers" class="divide-y text-sm"></div>
+      </div>
+    </section>
+
+    <!-- INVOICES -->
+    <section id="page-invoices" class="page">
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined">receipt_long</span><h3 class="font-bold">الفواتير</h3></div>
+          <div class="relative"><span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">search</span><input id="searchInvoices" class="border rounded p-2 text-sm ps-9" placeholder="بحث فواتير" /></div>
+        </div>
+        <div id="listInvoices" class="divide-y text-sm"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="page-settings" class="page">
+      <div class="card p-4 space-y-3">
+        <div class="flex items-center gap-2"><span class="material-symbols-outlined">settings</span><h3 class="font-bold">إعدادات المزامنة</h3></div>
+        <div class="grid grid-cols-1 gap-3">
+          <div><label class="text-xs text-gray-600">API Key</label><input id="stApiKey" class="w-full border rounded p-2" /></div>
+          <div><label class="text-xs text-gray-600">Auth Domain</label><input id="stAuthDomain" class="w-full border rounded p-2" /></div>
+          <div><label class="text-xs text-gray-600">Project ID</label><input id="stProjectId" class="w-full border rounded p-2" /></div>
+          <div><label class="text-xs text-gray-600">بادئة المجموعات (Prefix)</label><input id="stPrefix" class="w-full border rounded p-2" value="pos" /></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnSaveSettings" class="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-1"><span class="material-symbols-outlined">save</span>حفظ</button>
+          <button id="btnTestSettings" class="bg-gray-100 border border-gray-200 px-4 py-2 rounded flex items-center gap-1"><span class="material-symbols-outlined">wifi</span>اختبار الاتصال</button>
+          <span id="testStatus" class="text-sm"></span>
+        </div>
+        <p class="text-xs text-gray-500">يتم حفظ الإعدادات محلياً على الهاتف.</p>
+      </div>
+    </section>
+
+    <!-- SCAN PAGE (Full-screen Camera) -->
+    <section id="page-scan" class="scan-page">
+      <div class="scan-header">
+        <button id="btnBackFromScan" class="flex items-center gap-1 text-sm"><span class="material-symbols-outlined">arrow_back</span>رجوع</button>
+        <div class="ms-auto flex items-center gap-2 text-sm"><span class="material-symbols-outlined icon-anim">center_focus_strong</span>وضع الماسح</div>
+      </div>
+      <div class="flex-1 flex flex-col">
+        <div id="reader" class="flex-1"></div>
+        <div id="scanMsg" class="text-center text-sm text-gray-200 py-2">وجّه الكاميرا نحو الباركود</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Scan Button -->
+  <button id="btnScan" class="fab" title="مسح باركود" aria-label="مسح باركود">
+    <span class="material-symbols-outlined" style="font-size:28px">qr_code_scanner</span>
+  </button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="tab-btn active-tab" data-tab="home"><span class="material-symbols-outlined">home</span>الرئيسية</button>
+    <button class="tab-btn" data-tab="products"><span class="material-symbols-outlined">shopping_bag</span>المنتجات</button>
+    <button class="tab-btn" data-tab="customers"><span class="material-symbols-outlined">group</span>العملاء</button>
+    <button class="tab-btn" data-tab="invoices"><span class="material-symbols-outlined">receipt_long</span>الفواتير</button>
+    <button class="tab-btn" data-tab="settings"><span class="material-symbols-outlined">settings</span>الإعدادات</button>
+  </nav>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, getDocs, query, orderBy, limit, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    // State
+    let app = null; let db = null;
+    let cfg = JSON.parse(localStorage.getItem('ysk_phone_sync_settings') || '{}');
+    let prefix = cfg.prefix || 'pos';
+    let dataState = { products: [], customers: [], invoices: [], expenses: [] };
+
+    // Helpers
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const fmt = n => (Number(n)||0).toFixed(2) + ' ج.م';
+    function toast(msg, ok=true){
+      const el = document.createElement('div'); el.role='status';
+      el.className = `fixed left-1/2 -translate-x-1/2 bottom-24 z-[70] px-4 py-2 rounded text-white ${ok?'bg-green-600':'bg-red-600'}`;
+      el.textContent = msg; document.body.appendChild(el); setTimeout(()=>el.remove(), 2000);
+    }
+
+    // Tabs
+    function switchTab(tab){
+      $$('.page').forEach(p => p.classList.remove('active'));
+      if (tab==='scan'){ $('#page-scan').classList.add('active'); startScan(); }
+      else { stopScan(); $(`#page-${tab}`).classList.add('active'); }
+      $$('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+      const btn = $(`.tab-btn[data-tab="${tab}"]`); if (btn) btn.classList.add('active-tab');
+    }
+    $$('.tab-btn').forEach(btn => btn.addEventListener('click', ()=>switchTab(btn.dataset.tab)));
+
+    // Settings bind
+    $('#stApiKey').value = cfg.apiKey || '';
+    $('#stAuthDomain').value = cfg.authDomain || '';
+    $('#stProjectId').value = cfg.projectId || '';
+    $('#stPrefix').value = prefix;
+
+    async function initFirebaseIfPossible(){
+      if (!cfg.apiKey || !cfg.projectId) return false;
+      try{
+        if (!app){ app = initializeApp({ apiKey: cfg.apiKey, authDomain: cfg.authDomain, projectId: cfg.projectId }, 'ysk-phone'); }
+        if (!db){ db = getFirestore(app); }
+        return true;
+      }catch(e){ console.error(e); return false; }
+    }
+
+    async function testConnection(){
+      const ok = await initFirebaseIfPossible(); if (!ok) return false;
+      try{ await setDoc(doc(db, `${prefix}_connection`, 'test'), { ts: new Date().toISOString() }, { merge:true }); return true; }catch(e){ console.error(e); return false; }
+    }
+
+    async function pullAll(){
+      if (!db) return;
+      async function pullColl(name){ const snap = await getDocs(query(collection(db, name), orderBy('__name__'), limit(500))); return snap.docs.map(d=>({ id:d.id, ...d.data() })); }
+      const [products, customers, invoices, expenses] = await Promise.all([
+        pullColl(`${prefix}_products`).catch(()=>[]),
+        pullColl(`${prefix}_customers`).catch(()=>[]),
+        pullColl(`${prefix}_invoices`).catch(()=>[]),
+        pullColl(`${prefix}_expenses`).catch(()=>[]),
+      ]);
+      dataState = { products, customers, invoices, expenses };
+      renderAll();
+    }
+
+    function renderKPIs(){
+      const totalSales = dataState.invoices.reduce((s,i)=>s+(i.total||0),0);
+      const returns = dataState.invoices.reduce((s,i)=> s + (i.refundedAmount||0), 0);
+      const expenses = dataState.expenses.reduce((s,e)=> s + (e.amount||0), 0);
+      $('#kpiTotalSales').textContent = fmt(totalSales);
+      $('#kpiReturns').textContent = fmt(returns);
+      $('#kpiExpenses').textContent = fmt(expenses);
+      $('#kpiInvoices').textContent = String(dataState.invoices.length);
+    }
+
+    function renderProducts(filter=''){
+      const cont = $('#listProducts'); cont.innerHTML=''; const f = filter.toLowerCase();
+      dataState.products.filter(p=>!filter || p.name?.toLowerCase().includes(f) || String(p.barcode||'').includes(filter))
+        .slice(0,500).forEach(p=>{
+          const row = document.createElement('div'); row.className='py-2 flex items-center justify-between';
+          row.innerHTML = `<div><div class="font-semibold">${p.name||'-'}</div><div class=\"text-xs text-gray-500\">باركود: ${p.barcode||'-'}</div></div><div class="text-sm">${fmt(p.price||0)}</div>`;
+          cont.appendChild(row);
+        });
+    }
+
+    function renderCustomers(filter=''){
+      const cont = $('#listCustomers'); cont.innerHTML=''; const f = filter.toLowerCase();
+      dataState.customers.filter(c=>!filter || c.name?.toLowerCase().includes(f) || String(c.phone||'').includes(filter))
+        .slice(0,500).forEach(c=>{
+          const row=document.createElement('div'); row.className='py-2 flex items-center justify-between';
+          row.innerHTML = `<div><div class="font-semibold">${c.name||'-'}</div><div class="text-xs text-gray-500">${c.phone||''}</div></div><div class="text-xs text-gray-600">ديون: ${fmt(c.debt||0)}</div>`;
+          cont.appendChild(row);
+        });
+    }
+
+    function renderInvoices(filter=''){
+      const cont = $('#listInvoices'); cont.innerHTML=''; const f = filter.toLowerCase();
+      dataState.invoices.filter(inv=>{
+        const cust = (inv.customer && inv.customer.name)||'عميل نقدي';
+        return !filter || String(inv.id).toLowerCase().includes(f) || String(cust).toLowerCase().includes(f);
+      }).slice(0,500).forEach(inv=>{
+        const row=document.createElement('div'); row.className='py-2 flex items-center justify-between';
+        const cust = (inv.customer && inv.customer.name)||'عميل نقدي';
+        row.innerHTML = `<div><div class="font-semibold">${inv.id}</div><div class="text-xs text-gray-500">${cust} • ${inv.date||''}</div></div><div class="text-sm font-bold">${fmt(inv.total||0)}</div>`;
+        cont.appendChild(row);
+      });
+    }
+
+    function renderAll(){ renderKPIs(); renderProducts($('#searchProducts').value||''); renderCustomers($('#searchCustomers').value||''); renderInvoices($('#searchInvoices').value||''); }
+
+    // Global live search with debounce
+    let debounceTimer;
+    function debounce(fn, d=200){ clearTimeout(debounceTimer); debounceTimer=setTimeout(fn,d); }
+    $('#globalSearch').addEventListener('input', (e)=>{ debounce(()=>globalSearch(e.target.value), 200); });
+    function globalSearch(q){
+      const f = (q||'').toLowerCase(); const out=[];
+      dataState.products.filter(p=>p.name?.toLowerCase().includes(f) || String(p.barcode||'').includes(q)).slice(0,10).forEach(p=>out.push({type:'منتج', title:p.name, sub:`باركود: ${p.barcode||'-'}`, extra: fmt(p.price||0)}));
+      dataState.customers.filter(c=>c.name?.toLowerCase().includes(f) || String(c.phone||'').includes(q)).slice(0,10).forEach(c=>out.push({type:'عميل', title:c.name, sub:c.phone||'', extra: `ديون: ${fmt(c.debt||0)}`}));
+      dataState.invoices.filter(inv=>String(inv.id).toLowerCase().includes(f) || (inv.customer && inv.customer.name || '').toLowerCase().includes(f)).slice(0,10).forEach(inv=>out.push({type:'فاتورة', title:inv.id, sub:(inv.customer && inv.customer.name)||'عميل نقدي', extra: fmt(inv.total||0)}));
+      dataState.expenses.filter(e=>e.category?.toLowerCase().includes(f) || e.description?.toLowerCase().includes(f)).slice(0,10).forEach(e=>out.push({type:'مصروف', title:e.category||'مصروف', sub:e.description||'', extra: fmt(e.amount||0)}));
+      const wrap = $('#searchResults'); wrap.innerHTML=''; if (out.length===0){ wrap.innerHTML = '<div class="text-gray-500">لا نتائج</div>'; return; }
+      out.forEach(r=>{ const el=document.createElement('div'); el.className='p-2 rounded border'; el.innerHTML = `<div class="flex items-center justify-between"><div><span class="text-xs text-gray-500">${r.type}</span><div class="font-semibold">${r.title}</div><div class="text-xs text-gray-500">${r.sub||''}</div></div><div class="text-sm">${r.extra||''}</div></div>`; wrap.appendChild(el); });
+    }
+
+    // Per-page live searches
+    $('#searchProducts').addEventListener('input', e=>renderProducts(e.target.value));
+    $('#searchCustomers').addEventListener('input', e=>renderCustomers(e.target.value));
+    $('#searchInvoices').addEventListener('input', e=>renderInvoices(e.target.value));
+
+    // Save settings & test
+    $('#btnSaveSettings').addEventListener('click', async ()=>{
+      cfg = { apiKey: $('#stApiKey').value.trim(), authDomain: $('#stAuthDomain').value.trim(), projectId: $('#stProjectId').value.trim(), prefix: $('#stPrefix').value.trim()||'pos' };
+      prefix = cfg.prefix; localStorage.setItem('ysk_phone_sync_settings', JSON.stringify(cfg));
+      const ok = await initFirebaseIfPossible(); if (ok){ toast('تم حفظ الإعدادات'); pullAll(); } else toast('إعدادات غير مكتملة', false);
+    });
+
+    $('#btnTestSettings').addEventListener('click', async ()=>{
+      $('#testStatus').textContent = 'جارٍ الاختبار...';
+      const ok = await testConnection();
+      $('#testStatus').textContent = ok ? 'الاتصال ناجح + تم رفع إعدادات التطبيق' : 'فشل الاتصال';
+      if (ok){ try{ await setDoc(doc(db, `${prefix}_settings`, 'phone-app'), { testedAt: new Date().toISOString(), app: 'YSK Phone' }, { merge:true }); }catch{} }
+    });
+
+    // Scan page logic
+    let html5QrCode = null;
+    async function startScan(){
+      try{
+        if (!html5QrCode) html5QrCode = new Html5Qrcode('reader');
+        $('#scanMsg').textContent = 'وجّه الكاميرا نحو الباركود';
+        await html5QrCode.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 260, height: 260 } }, onScan, ()=>{});
+      }catch(e){ $('#scanMsg').textContent = 'تعذّر فتح الكاميرا'; }
+    }
+    async function stopScan(){ if (html5QrCode && html5QrCode.isScanning){ try{ await html5QrCode.stop(); }catch(_){} } }
+    async function onScan(text){
+      $('#scanMsg').textContent = 'جارٍ المعالجة...';
+      const p = dataState.products.find(p=>String(p.barcode||'')===text);
+      if (p){ toast(`تم العثور على: ${p.name}`); $('#globalSearch').value = text; globalSearch(text); switchTab('home'); }
+      else { toast('لم يتم العثور على منتج مطابق', false); }
+      try{ if (db){ await setDoc(doc(db, 'scannerSessions', 'fixed'), { status:'scanned', scannedValue: text, scannedAt: new Date() }, { merge:true }); } }catch{}
+    }
+
+    // FAB opens scan page
+    $('#btnScan').addEventListener('click', ()=>switchTab('scan'));
+    $('#btnBackFromScan').addEventListener('click', ()=>{ switchTab('home'); });
+
+    // Top test button
+    $('#btnTestConnection').addEventListener('click', async ()=>{
+      const ok = await testConnection();
+      toast(ok? 'الاتصال ناجح + إعدادات مرفوعة' : 'فشل الاتصال', ok);
+      if (ok){ try{ await setDoc(doc(db, `${prefix}_settings`, 'phone-app'), { testedAt: new Date().toISOString(), app: 'YSK Phone' }, { merge:true }); }catch{} }
+    });
+
+    // Initial
+    const okInit = await initFirebaseIfPossible(); if (okInit) pullAll();
+
+    // PWA - register service worker
+    if ('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+    }
+  </script>
+</body>
+</html>
