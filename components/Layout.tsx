@@ -50,23 +50,23 @@ const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
       </nav>
       <div className="px-4 py-4 border-t">
         <div className="hidden lg:block text-center text-xs text-black">
-            <img src="/YSK-SALES.png" alt="YSK SALES Logo" className="h-10 w-10 mx-auto mb-2"/>
+            <img src={import.meta.env.BASE_URL + "YSK-SALES.png"} alt="YSK SALES Logo" className="h-10 w-10 mx-auto mb-2"/>
             <p>Developed by: Sameh reda</p>
             <p>للدعم الفني والمبيعات</p>
             <div className="flex justify-center items-center my-2">
-                <img src="/mobile.png" alt="Phone" className="h-4 w-4 ml-2"/>
+                <img src={import.meta.env.BASE_URL + "mobile.png"} alt="Phone" className="h-4 w-4 ml-2"/>
                 <a href="tel:01023160657">01023160657</a>
             </div>
             <div className="flex justify-center items-center my-2">
-                <img src="/whatsapp.png" alt="Whatsapp" className="h-4 w-4 ml-2"/>
+                <img src={import.meta.env.BASE_URL + "whatsapp.png"} alt="Whatsapp" className="h-4 w-4 ml-2"/>
                 <a href="https://wa.me/201023160657" target="_blank">01023160657</a>
             </div>
             <div className="flex justify-center items-center my-2">
-                <img src="/web-domain.png" alt="Website" className="h-4 w-4 ml-2"/>
+                <img src={import.meta.env.BASE_URL + "web-domain.png"} alt="Website" className="h-4 w-4 ml-2"/>
                 <a href="https://doc-digital.online" target="_blank">doc-digital.online</a>
             </div>
             <div className="flex justify-center items-center my-2">
-                <img src="/gmail.png" alt="Email" className="h-4 w-4 ml-2"/>
+                <img src={import.meta.env.BASE_URL + "gmail.png"} alt="Email" className="h-4 w-4 ml-2"/>
                 <a href="mailto:same7redaa@gmail.com">same7redaa@gmail.com</a>
             </div>
         </div>

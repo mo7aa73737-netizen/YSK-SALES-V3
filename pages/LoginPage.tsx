@@ -53,7 +53,7 @@ const LoginPage = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
-            <img src="/YSK-SALES.png" alt="YSK SALES Logo" className="mx-auto h-24 w-24"/>
+            <img src={import.meta.env.BASE_URL + "YSK-SALES.png"} alt="YSK SALES Logo" className="mx-auto h-24 w-24"/>
             <h2 className="mt-6 text-3xl font-bold text-gray-900">تسجيل الدخول</h2>
             <p className="mt-2 text-sm text-gray-600">مرحباً بك مجدداً! الرجاء إدخال بياناتك.</p>
         </div>

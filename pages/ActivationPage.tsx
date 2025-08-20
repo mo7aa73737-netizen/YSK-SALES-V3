@@ -132,7 +132,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({ onActivate }) => {
         {/* رأس الصفحة مع اللوجو */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/YSK-SALES.png" alt="YSK POS" className="h-20 w-20" />
+            <img src={import.meta.env.BASE_URL + "YSK-SALES.png"} alt="YSK POS" className="h-20 w-20" />
           </div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">تفعيل نظام YSK POS</h1>
           <p className="text-xl text-gray-600">
