@@ -1,0 +1,9 @@
+{
+  "systemName": "نظامي",
+  "companyName": "شركة ABC للتجارة",
+  "companyAddress": "123 شارع التجارة، القاهرة",
+  "companyPhone": "01234567890",
+  "customInvoiceBarcode": "",
+  "allowInvoiceEditing": false,
+  "enableStockAlerts": true
+}

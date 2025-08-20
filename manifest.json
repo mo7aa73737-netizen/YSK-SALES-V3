@@ -4,12 +4,12 @@
   "name": "YSK SALES | لإدارة المبيعات",
   "icons": [
     {
-      "src": "YSK-SALES.png",
+      "src": "/YSK-SALES-V3/YSK-SALES.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "YSK-SALES.png",
+      "src": "/YSK-SALES-V3/YSK-SALES.png",
       "type": "image/png",
       "sizes": "512x512"
     }
