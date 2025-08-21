@@ -133,13 +133,17 @@ const SyncSettingsModal = ({ settings, onSave, onClose }: { settings: Settings, 
     const [testing, setTesting] = useState<'idle'|'loading'|'ok'|'fail'>('idle');
     const [syncing, setSyncing] = useState<'idle'|'loading'|'ok'|'fail'>('idle');
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type, checked } = e.target;
         if (name.startsWith('syncWhat.')) {
             const key = name.split('.')[1] as keyof NonNullable<Settings['syncWhat']>;
             setLocalSettings(prev => ({ ...prev, syncWhat: { ...(prev.syncWhat || {}), [key]: checked } }));
         } else if (name === 'syncEnabled') {
             setLocalSettings(prev => ({ ...prev, syncEnabled: checked }));
+        } else if (name === 'autoSync') {
+            setLocalSettings(prev => ({ ...prev, autoSync: checked }));
+        } else if (name === 'autoSyncInterval') {
+            setLocalSettings(prev => ({ ...prev, autoSyncInterval: parseInt(value) }));
         } else {
             setLocalSettings(prev => ({ ...prev, [name]: value } as any));
         }
@@ -209,12 +213,36 @@ const SyncSettingsModal = ({ settings, onSave, onClose }: { settings: Settings, 
                     </div>
                 </div>
 
+                <div className="mt-4">
+                    <h4 className="font-semibold mb-2">المزامنة التلقائية</h4>
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-2">
+                            <input type="checkbox" name="autoSync" checked={!!localSettings.autoSync} onChange={handleChange} />
+                            <span className="text-sm">تفعيل المزامنة التلقائية</span>
+                        </label>
+                        {localSettings.autoSync && (
+                            <div className="ml-6 space-y-2">
+                                <div>
+                                    <label className="block text-sm text-gray-600 mb-1">فترة المزامنة (بالدقائق)</label>
+                                    <select name="autoSyncInterval" value={localSettings.autoSyncInterval || 30} onChange={handleChange} className="p-2 border rounded text-sm">
+                                        <option value={5}>كل 5 دقائق</option>
+                                        <option value={15}>كل 15 دقيقة</option>
+                                        <option value={30}>كل 30 دقيقة</option>
+                                        <option value={60}>كل ساعة</option>
+                                        <option value={180}>كل 3 ساعات</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="text-xs text-gray-500">آخر مزامنة: {localSettings.lastSyncAt ? new Date(localSettings.lastSyncAt).toLocaleString('ar-EG') : 'لم تتم بعد'}</div>
             </div>
             <div className="mt-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <button onClick={handleTest} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">اختبار الاتصال</button>
-                    {testing === 'loading' && <span className="text-gray-600 text-sm">جارٍ الاختبار...</span>}
+                    {testing === 'loading' && <span className="text-gray-600 text-sm">جاري الاختبار</span>}
                     {testing === 'ok' && <span className="text-green-600 text-sm">الاتصال ناجح</span>}
                     {testing === 'fail' && <span className="text-red-600 text-sm">فشل الاتصال</span>}
                 </div>
@@ -453,7 +481,7 @@ const SettingsPage = () => {
                 await saveSettings({ ...settings, lastSyncAt: new Date().toISOString() });
                 addNotification('تمت المزامنة بنجاح');
             } else {
-                addNotification('فشلت المزامنة: ' + (res.error || ''), 'error');
+                addNotification('فشلت ا��مزامنة: ' + (res.error || ''), 'error');
             }
         } catch (e) {
             setSyncRunning('fail');
@@ -630,6 +658,9 @@ const SettingsPage = () => {
                                                 {settings.syncEnabled ? 'مفعلة' : 'غير مفعلة'}
                                             </span></div>
                                             <div>المشروع: <span className="font-medium">{settings.syncProjectId || 'غير محدد'}</span></div>
+                                            <div>المزامنة التلقائية: <span className={`font-medium ${settings.autoSync ? 'text-green-600' : 'text-gray-400'}`}>
+                                                {settings.autoSync ? `كل ${settings.autoSyncInterval || 30} دقيقة` : 'غير مفعلة'}
+                                            </span></div>
                                         </div>
                                     </div>
                                     <button 

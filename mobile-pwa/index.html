@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>YSK SALES | موبايل</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="icon" type="image/png" href="YSK-SALES.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Cairo', sans-serif; 
+      background-color: #f8fafc;
+    }
+    
+    .glass {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .glass-dark {
+      background: rgba(0, 0, 0, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s ease;
+    }
+    
+    .btn-success:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .product-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s ease;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      border-color: #d1d5db;
+    }
+
+    .tab-btn {
+      color: #6b7280;
+      text-align: center;
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+    }
+    
+    .tab-content {
+      display: block;
+    }
+    
+    .tab-content.hidden {
+      display: none;
+    }
+
+    /* Scanner modal animations */
+    @keyframes modal-in { 
+      from { 
+        opacity: 0; 
+      } 
+      to { 
+        opacity: 1; 
+      } 
+    }
+    
+    @keyframes modal-out { 
+      from { 
+        opacity: 1; 
+      } 
+      to { 
+        opacity: 0; 
+      } 
+    }
+    
+    #scannerSection.scanner-enter { animation: modal-in 200ms ease-out; }
+    #scannerSection.scanner-leave { animation: modal-out 150ms ease-in forwards; }
+
+    /* Toast animations */
+    @keyframes toast-in { 
+      from { 
+        transform: translateY(20px); 
+        opacity: 0; 
+      } 
+      to { 
+        transform: translateY(0); 
+        opacity: 1; 
+      } 
+    }
+    
+    @keyframes toast-out { 
+      from { 
+        transform: translateY(0); 
+        opacity: 1; 
+      } 
+      to { 
+        transform: translateY(20px); 
+        opacity: 0; 
+      } 
+    }
+    
+    .toast { animation: toast-in 200ms ease-out; }
+    .toast.hide { animation: toast-out 150ms ease-in forwards; }
+
+    /* Scanner fullscreen styles */
+    #reader {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
+    #reader video {
+      object-fit: cover !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
+    #reader canvas {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- App Shell -->
+  <div id="app" class="min-h-screen">
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+      <div class="max-w-lg mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <img src="YSK-SALES.png" alt="logo" class="w-5 h-5" />
+            </div>
+            <div>
+              <h1 class="text-lg font-bold text-gray-900">YSK SALES</h1>
+              <p class="text-xs text-gray-500">نظام إدارة المبيعات</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div id="syncStatus" class="px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+              <i class="fas fa-times-circle text-red-500 me-1"></i>غير متصل
+            </div>
+            <button id="openSettingsBtn" class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-all">
+              <i class="fas fa-cog text-gray-600"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="max-w-lg mx-auto px-4 py-4 space-y-4">
+      <!-- Quick Actions -->
+      <div class="grid grid-cols-2 gap-3">
+        <button id="refreshBtn" class="btn-primary text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium">
+          <i class="fas fa-sync-alt"></i>
+          تحديث
+        </button>
+        <button id="openScannerBtn" class="btn-success text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium">
+          <i class="fas fa-qrcode"></i>
+          مسح باركود
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="relative">
+        <input id="searchInput" type="text" placeholder="ابحث في البيانات..." 
+               class="w-full rounded-lg border border-gray-300 bg-white py-3 px-4 pe-10 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        <div class="absolute left-3 top-1/2 -translate-y-1/2">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+      </div>
+
+      <!-- Data Tabs -->
+      <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+        <div class="grid grid-cols-4 gap-1">
+          <button id="tabProducts" class="tab-btn active py-2 px-3 rounded-md text-xs font-medium transition-all">
+            <i class="fas fa-box mb-1"></i>
+            <div>المنتجات</div>
+          </button>
+          <button id="tabCustomers" class="tab-btn py-2 px-3 rounded-md text-xs font-medium transition-all">
+            <i class="fas fa-users mb-1"></i>
+            <div>العملاء</div>
+          </button>
+          <button id="tabInvoices" class="tab-btn py-2 px-3 rounded-md text-xs font-medium transition-all">
+            <i class="fas fa-file-invoice mb-1"></i>
+            <div>الفواتير</div>
+          </button>
+          <button id="tabExpenses" class="tab-btn py-2 px-3 rounded-md text-xs font-medium transition-all">
+            <i class="fas fa-receipt mb-1"></i>
+            <div>المصروفات</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Data Content -->
+      <section class="space-y-3">
+        <!-- Products Tab -->
+        <div id="contentProducts" class="tab-content">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold text-gray-900">المنتجات المتاحة</h2>
+            <div id="productsCount" class="px-2 py-1 rounded-full bg-blue-50 text-xs font-medium text-blue-700">0 منتج</div>
+          </div>
+          <div id="productsContainer" class="space-y-2"></div>
+          <div id="emptyProducts" class="hidden text-center py-12">
+            <div class="bg-white rounded-xl p-6 border border-gray-200">
+              <i class="fas fa-box-open text-4xl text-gray-300 mb-3"></i>
+              <p class="text-base font-medium text-gray-900 mb-1">لا توجد منتجات</p>
+              <p class="text-sm text-gray-500">تأكد من إعدادات المزامنة</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customers Tab -->
+        <div id="contentCustomers" class="tab-content hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold text-gray-900">العملاء</h2>
+            <div id="customersCount" class="px-2 py-1 rounded-full bg-green-50 text-xs font-medium text-green-700">0 عميل</div>
+          </div>
+          <div id="customersContainer" class="space-y-2"></div>
+          <div id="emptyCustomers" class="hidden text-center py-12">
+            <div class="bg-white rounded-xl p-6 border border-gray-200">
+              <i class="fas fa-user-friends text-4xl text-gray-300 mb-3"></i>
+              <p class="text-base font-medium text-gray-900 mb-1">لا يوجد عملاء</p>
+              <p class="text-sm text-gray-500">تأكد من إعدادات المزامنة</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invoices Tab -->
+        <div id="contentInvoices" class="tab-content hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold text-gray-900">الفواتير</h2>
+            <div id="invoicesCount" class="px-2 py-1 rounded-full bg-purple-50 text-xs font-medium text-purple-700">0 فاتورة</div>
+          </div>
+          <div id="invoicesContainer" class="space-y-2"></div>
+          <div id="emptyInvoices" class="hidden text-center py-12">
+            <div class="bg-white rounded-xl p-6 border border-gray-200">
+              <i class="fas fa-file-invoice text-4xl text-gray-300 mb-3"></i>
+              <p class="text-base font-medium text-gray-900 mb-1">لا توجد فواتير</p>
+              <p class="text-sm text-gray-500">تأكد من إعدادات المزامنة</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expenses Tab -->
+        <div id="contentExpenses" class="tab-content hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold text-gray-900">المصروفات</h2>
+            <div id="expensesCount" class="px-2 py-1 rounded-full bg-red-50 text-xs font-medium text-red-700">0 مصروف</div>
+          </div>
+          <div id="expensesContainer" class="space-y-2"></div>
+          <div id="emptyExpenses" class="hidden text-center py-12">
+            <div class="bg-white rounded-xl p-6 border border-gray-200">
+              <i class="fas fa-receipt text-4xl text-gray-300 mb-3"></i>
+              <p class="text-base font-medium text-gray-900 mb-1">لا توجد مصروفات</p>
+              <p class="text-sm text-gray-500">تأكد من إعدادات المزامنة</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scanner Overlay Modal - Fullscreen -->
+      <div id="scannerSection" class="fixed inset-0 hidden z-50 bg-black">
+        <!-- Close Button - Top Right -->
+        <button id="closeScannerBtn" class="absolute top-4 right-4 z-20 w-12 h-12 rounded-full bg-black/50 flex items-center justify-center hover:bg-black/70 transition-all">
+          <i class="fas fa-times text-white text-xl"></i>
+        </button>
+        
+        <!-- Camera View - Full Screen -->
+        <div id="reader" class="w-full h-full"></div>
+        
+        <!-- Bottom Instructions -->
+        <div class="absolute bottom-4 left-4 right-4 z-10">
+          <div class="text-center">
+            <div class="bg-black/50 rounded-lg px-4 py-2 backdrop-blur-sm">
+              <p class="text-white text-sm">ضع الباركود داخل الإطار</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-sm mx-4 bg-white rounded-2xl overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <i class="fas fa-cog text-blue-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-gray-900">إعدادات Firebase</h3>
+              <p class="text-xs text-gray-500">ربط التطبيق بقاعدة البيانات</p>
+            </div>
+          </div>
+          <button id="closeSettingsBtn" class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-all">
+            <i class="fas fa-times text-gray-600"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="p-4 space-y-4">
+        <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="fas fa-info-circle text-blue-600"></i>
+            <span class="text-sm font-medium text-blue-900">معلومات مهمة</span>
+          </div>
+          <p class="text-xs text-blue-800 leading-relaxed">
+            أدخل إعدادات Firebase مرة واحدة وسيتم استخدامها للمزامنة وجلسات المسح معاً.
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">مزامنة البيانات</label>
+            <div class="space-y-2">
+              <input id="syncApiKey" class="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="API Key" />
+              <input id="syncAuthDomain" class="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Auth Domain" />
+              <input id="syncProjectId" class="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Project ID" />
+              <input id="prefix" class="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Prefix (مثال: store1)" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">إعدادات إضافية</label>
+            <input id="deviceId" class="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Device ID (يُولد تلقائياً)" />
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button id="testConnBtn" class="flex-1 py-2 px-3 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-all">
+            اختبار الاتصال
+          </button>
+          <button id="saveSettingsBtn" class="flex-1 btn-primary text-white py-2 px-3 rounded-lg text-sm font-medium">
+            حفظ الإعدادات
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 space-y-2"></div>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

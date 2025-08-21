@@ -8,7 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 declare var JsBarcode: any;
 
 const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: Product | null, onClose: () => void, onSave: (product: Product, isNew: boolean) => Promise<void>, scannedBarcode: string }) => {
-    const { units, saveUnits } = useAppContext();
+    const { units, saveUnits, products } = useAppContext();
     const [editedProduct, setEditedProduct] = useState<Omit<Product, 'price' | 'purchasePrice' | 'quantity'>>(
         product || {
             id: '', name: '', unit: units[0] || {id: 0, name: ''}, 
@@ -18,20 +18,41 @@ const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: P
     const [price, setPrice] = useState(product?.price.toString() || '');
     const [purchasePrice, setPurchasePrice] = useState(product?.purchasePrice.toString() || '');
     const [quantity, setQuantity] = useState(product?.quantity.toString() || '');
+    const [barcodeError, setBarcodeError] = useState('');
 
     const [customUnit, setCustomUnit] = useState('');
     const isNew = !product;
+
+    // التحقق من تكرار الباركود
+    const checkBarcodeExists = (barcode: string) => {
+        if (!barcode.trim()) {
+            setBarcodeError('');
+            return false;
+        }
+        
+        const exists = products.some(p => p.barcode === barcode && (isNew || p.id !== product?.id));
+        if (exists) {
+            const existingProduct = products.find(p => p.barcode === barcode && (isNew || p.id !== product?.id));
+            setBarcodeError(`هذا الباركود موجود بالفعل للمنتج: ${existingProduct?.name}`);
+            return true;
+        }
+        
+        setBarcodeError('');
+        return false;
+    };
 
     // Update barcode when scannedBarcode changes
     useEffect(() => {
         if (scannedBarcode) {
             setEditedProduct(prev => ({ ...prev, barcode: scannedBarcode }));
+            checkBarcodeExists(scannedBarcode);
         }
     }, [scannedBarcode]);
 
     useEffect(() => {
         const handleScan = (barcode: string) => {
             setEditedProduct(prev => ({ ...prev, barcode: barcode }));
+            checkBarcodeExists(barcode);
         };
 
         const unsubscribe = listenForScanResult(handleScan);
@@ -49,6 +70,9 @@ const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: P
             if (selectedUnit) {
                 setEditedProduct({ ...editedProduct, unit: selectedUnit });
             }
+        } else if (name === 'barcode') {
+            setEditedProduct({ ...editedProduct, [name]: value });
+            checkBarcodeExists(value);
         } else {
             setEditedProduct({ ...editedProduct, [name]: value });
         }
@@ -65,6 +89,11 @@ const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: P
     };
 
     const handleSave = async () => {
+        // التحقق من تكرار الباركود قبل الحفظ
+        if (barcodeError) {
+            return;
+        }
+
         let finalProduct: Product = {
             ...editedProduct,
             price: parseFloat(price) || 0,
@@ -81,6 +110,7 @@ const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: P
     const handleGenerateBarcode = () => {
         const randomBarcode = `${Date.now()}`;
         setEditedProduct({ ...editedProduct, barcode: randomBarcode });
+        setBarcodeError('');
     };
 
     return (
@@ -124,10 +154,28 @@ const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: P
                      <div className="md:col-span-2">
                         <label htmlFor="barcode" className="block text-sm font-medium text-gray-700 mb-1">الباركود</label>
                         <div className="relative">
-                           <input type="text" id="barcode" name="barcode" value={editedProduct.barcode} onChange={handleChange} placeholder="يولد تلقائياً اذا ترك فارغاً" className="p-2 border rounded w-full pe-20" />
+                           <input 
+                               type="text" 
+                               id="barcode" 
+                               name="barcode" 
+                               value={editedProduct.barcode} 
+                               onChange={handleChange} 
+                               placeholder="يولد تلقائياً اذا ترك فارغاً" 
+                               className={`p-2 border rounded w-full pe-20 ${barcodeError ? 'border-red-500 bg-red-50' : ''}`}
+                           />
                            <button onClick={handleGenerateBarcode} className="absolute left-12 top-1/2 -translate-y-1/2 text-gray-500" title="توليد باركود"><EditIcon className="h-5 w-5"/></button>
                            <button onClick={requestScan} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600" title="مسح باركود"><BarcodeIcon className="h-5 w-5"/></button>
                         </div>
+                        
+                        {/* رسالة الخطأ */}
+                        {barcodeError && (
+                            <p className="mt-2 text-sm text-red-600 flex items-center">
+                                <svg className="h-4 w-4 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                                {barcodeError}
+                            </p>
+                        )}
                     </div>
                     <div>
                         <label htmlFor="productionDate" className="block text-sm font-medium text-gray-700 mb-1">تاريخ الإنتاج</label>
@@ -140,7 +188,13 @@ const ProductModal = ({ product, onClose, onSave, scannedBarcode }: { product: P
                 </div>
                 <div className="mt-6 flex justify-end space-x-3 space-x-reverse">
                     <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">إلغاء</button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded">حفظ</button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={!!barcodeError}
+                        className={`px-4 py-2 rounded ${barcodeError ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                    >
+                        حفظ
+                    </button>
                 </div>
             </div>
         </div>
@@ -246,12 +300,11 @@ const ProductsPage = () => {
     };
 
     const handleSaveProduct = async (product: Product, isNew: boolean) => {
-        const barcodeExists = products.some(p => p.barcode === product.barcode && (isNew || p.id !== product.id));
-        if (barcodeExists) {
-            addNotification('هذا الباركود موجود بالفعل لمنتج آخر.', 'error');
-            return; 
-        }
+        // لا نحتاج للتحقق هنا لأن Modal يتعامل مع ذلك
+        await saveProductFinal(product, isNew);
+    };
 
+    const saveProductFinal = async (product: Product, isNew: boolean) => {
         if (isNew) {
             await saveProducts([product, ...products]);
             addNotification('تمت إضافة المنتج بنجاح');
@@ -298,57 +351,59 @@ const ProductsPage = () => {
 
     const handlePrintBarcode = (product: Product) => {
         const content = `
-            <div class="barcode-item">
-                <svg class="barcode-svg" jsbarcode-value="${product.barcode}"></svg>
-                <div class="product-name">${product.name}</div>
-                <div class="product-price">${product.price.toFixed(2)} ج.م</div>
+            <div class="barcode-label">
+                <svg class="barcode-svg" jsbarcode-value="${product.barcode}" jsbarcode-format="CODE128" jsbarcode-width="2" jsbarcode-height="60" jsbarcode-displayvalue="false" jsbarcode-fontsize="12"></svg>
+                <div class="barcode-text">${product.barcode} - ${product.name}</div>
             </div>
         `;
 
         const printStyles = `
             @page {
-                size: 58mm 40mm;
-                margin: 1mm;
+                size: 58mm 35mm portrait;
+                margin: 0;
             }
             @media print {
                 html, body {
                     width: 58mm !important;
-                    height: 40mm !important;
+                    height: 35mm !important;
                     margin: 0 !important;
                     padding: 0 !important;
                     overflow: hidden !important;
+                    font-family: 'Cairo', Arial, sans-serif;
                 }
                 * {
                     box-sizing: border-box;
                 }
             }
-            .barcode-item {
-                width: 100%;
-                height: 100%;
+            .barcode-label {
+                width: 58mm;
+                height: 35mm;
+                padding: 1mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 text-align: center;
-                font-family: Arial, sans-serif;
+                background: white;
             }
             .barcode-svg {
-                width: 95%;
-                height: 60%;
+                width: 56mm !important;
+                height: 28mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
             }
-            .product-name {
-                font-size: 8px;
+            .barcode-text {
+                font-size: 12px;
                 font-weight: bold;
-                margin-top: 2px;
-                max-width: 95%;
+                line-height: 1;
+                margin: -20px 0 0 0;
+                padding: 0;
+                text-align: center;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-            }
-            .product-price {
-                font-size: 7px;
-                margin-top: 1px;
-                color: #666;
+                max-width: 56mm;
             }
         `;
 
@@ -358,7 +413,8 @@ const ProductsPage = () => {
                 <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>طباعة باركود - ${product.name}</title>
+                        <title>ملصق باركود - ${product.name}</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
                         <style>${printStyles}</style>
                     </head>
                     <body>
@@ -370,10 +426,11 @@ const ProductsPage = () => {
                                 setTimeout(() => {
                                     window.print();
                                     window.close();
-                                }, 250);
+                                }, 500);
                             } catch (e) {
                                 console.error('JsBarcode Error:', e);
-                                window.close();
+                                document.body.innerHTML = '<div style="padding:10px;text-align:center;">خطأ في توليد الباركود</div>';
+                                setTimeout(() => window.close(), 2000);
                             }
                         </script>
                     </body>
@@ -392,56 +449,67 @@ const ProductsPage = () => {
         const selectedProductsList = products.filter(p => selectedProducts.has(p.id));
         const content = selectedProductsList.map(product => `
             <div class="barcode-item">
-                <svg class="barcode-svg" jsbarcode-value="${product.barcode}"></svg>
-                <div class="product-name">${product.name}</div>
-                <div class="product-price">${product.price.toFixed(2)} ج.م</div>
+                <svg class="barcode-svg" jsbarcode-value="${product.barcode}" jsbarcode-format="CODE128" jsbarcode-width="2" jsbarcode-height="60" jsbarcode-displayvalue="false" jsbarcode-fontsize="12"></svg>
+                <div class="barcode-text">${product.barcode} - ${product.name}</div>
             </div>
         `).join('');
 
         const printStyles = `
             @page {
-                size: A4;
-                margin: 5mm;
+                size: 58mm auto;
+                margin: 0;
             }
             @media print {
+                html, body {
+                    width: 58mm !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    font-family: 'Cairo', Arial, sans-serif;
+                }
                 * {
                     box-sizing: border-box;
                 }
             }
             body {
-                font-family: Arial, sans-serif;
+                font-family: 'Cairo', Arial, sans-serif;
                 display: flex;
-                flex-wrap: wrap;
-                gap: 2mm;
+                flex-direction: column;
+                gap: 0mm;
             }
             .barcode-item {
                 width: 58mm;
-                height: 40mm;
-                border: 1px solid #ddd;
+                height: 35mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 text-align: center;
                 page-break-inside: avoid;
+                padding: 1mm;
+                background: white;
+                border-bottom: 1px dashed #ccc;
+            }
+            .barcode-item:last-child {
+                border-bottom: none;
             }
             .barcode-svg {
-                width: 95%;
-                height: 60%;
+                width: 56mm !important;
+                height: 28mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
             }
-            .product-name {
-                font-size: 8px;
+            .barcode-text {
+                font-size: 12px;
                 font-weight: bold;
-                margin-top: 2px;
-                max-width: 95%;
+                line-height: 1;
+                margin: -20px 0 0 0;
+                padding: 0;
+                text-align: center;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-            }
-            .product-price {
-                font-size: 7px;
-                margin-top: 1px;
-                color: #666;
+                max-width: 56mm;
             }
         `;
 
@@ -452,6 +520,7 @@ const ProductsPage = () => {
                     <head>
                         <meta charset="UTF-8">
                         <title>طباعة باركودات متعددة</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
                         <style>${printStyles}</style>
                     </head>
                     <body>
@@ -464,76 +533,6 @@ const ProductsPage = () => {
                                     window.print();
                                     window.close();
                                 }, 500);
-                            } catch (e) {
-                                console.error('JsBarcode Error:', e);
-                                window.close();
-                            }
-                        </script>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-        }
-    };
-    
-    const handlePrintNewRandomBarcode = () => {
-        const randomBarcode = Math.floor(100000000000 + Math.random() * 900000000000).toString();
-
-        const content = `
-            <div class="barcode-item">
-                <svg class="barcode-svg" jsbarcode-value="${randomBarcode}"></svg>
-            </div>
-        `;
-
-        const printStyles = `
-            @page {
-                size: 58mm 30mm;
-                margin: 1mm;
-            }
-            @media print {
-                html, body {
-                    width: 58mm !important;
-                    height: 30mm !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    overflow: hidden !important;
-                }
-                * {
-                    box-sizing: border-box;
-                }
-            }
-            .barcode-item {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            .barcode-svg {
-                width: 95%;
-                height: 95%;
-            }
-        `;
-
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>طباعة باركود جديد</title>
-                        <style>${printStyles}</style>
-                    </head>
-                    <body>
-                        ${content}
-                        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-                        <script>
-                            try {
-                                JsBarcode(".barcode-svg").init();
-                                setTimeout(() => {
-                                    window.print();
-                                    window.close();
-                                }, 250);
                             } catch (e) {
                                 console.error('JsBarcode Error:', e);
                                 window.close();
@@ -630,14 +629,6 @@ const ProductsPage = () => {
                 </div>
                 
                 <div className="flex items-center space-x-2 space-x-reverse">
-                    <button 
-                        onClick={handlePrintNewRandomBarcode} 
-                        className="flex items-center bg-purple-500 text-white px-3 py-2 rounded-lg shadow hover:bg-purple-600 transition text-sm"
-                    >
-                        <BarcodeIcon className="h-4 w-4 me-1" />
-                        باركود جديد
-                    </button>
-                    
                     {selectedProducts.size > 0 && (
                         <>
                             <button 
@@ -715,7 +706,7 @@ const ProductsPage = () => {
                                         </button>
                                         <button 
                                             onClick={() => handleDeleteProduct(p.id)} 
-                                            title="ح��ف" 
+                                            title="حذف" 
                                             className="text-red-600 hover:text-red-800 p-1"
                                         >
                                             <TrashIcon className="h-5 w-5"/>

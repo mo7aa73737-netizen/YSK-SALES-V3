@@ -176,6 +176,11 @@ const App = () => {
         // The logic has been moved to LoginPage.tsx to handle remembering the username only.
     }, []);
 
+    // Re-initialize Firebase scanner when sync settings change
+    useEffect(() => {
+        initializeScanner(settings);
+    }, [settings.syncApiKey, settings.syncProjectId, settings.syncAuthDomain]);
+
     const initializeStorage = async () => {
         const fsSupported = 'showDirectoryPicker' in window;
 

@@ -12,18 +12,34 @@ export const initializeScanner = (settings: SystemSettings) => {
         // If app is already initialized, no need to re-initialize
         return;
     }
-    if (settings.scannerApiKey && settings.scannerProjectId) {
-        const firebaseConfig = {
-            apiKey: settings.scannerApiKey,
-            authDomain: settings.scannerAuthDomain,
-            projectId: settings.scannerProjectId,
+
+    // Prefer dedicated scanner config; fallback to sync config if scanner config is missing
+    let firebaseConfig: any | null = null;
+
+    if ((settings as any).scannerApiKey && (settings as any).scannerProjectId) {
+        firebaseConfig = {
+            apiKey: (settings as any).scannerApiKey,
+            authDomain: (settings as any).scannerAuthDomain,
+            projectId: (settings as any).scannerProjectId,
         };
-        try {
-            app = initializeApp(firebaseConfig, 'scanner'); // Use a unique name for the app instance
-            db = getFirestore(app);
-        } catch (error) {
-            console.error("Firebase initialization failed:", error);
-        }
+    } else if (settings.syncApiKey && settings.syncProjectId) {
+        firebaseConfig = {
+            apiKey: settings.syncApiKey,
+            authDomain: settings.syncAuthDomain,
+            projectId: settings.syncProjectId,
+        };
+    }
+
+    if (!firebaseConfig) {
+        // No config available
+        return;
+    }
+
+    try {
+        app = initializeApp(firebaseConfig, 'scanner'); // Use a unique name for the app instance
+        db = getFirestore(app);
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
     }
 };
 

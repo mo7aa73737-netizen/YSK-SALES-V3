@@ -30,13 +30,35 @@ const generateInvoiceHtml = (invoice: Invoice, settings: Settings): string => {
         </div>
     ` : '';
 
+    // تنسيق التاريخ والوقت
+    const invoiceDate = new Date(invoice.date);
+    const formattedDate = invoiceDate.toLocaleDateString('ar-EG');
+    const formattedTime = invoice.time || invoiceDate.toLocaleTimeString('ar-EG', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+    });
+
+    // تحديد نوع العميل
+    let customerType = '';
+    if (invoice.customer) {
+        customerType = `العميل: ${invoice.customer.name}`;
+    } else if (invoice.paymentType === 'نقدي') {
+        customerType = 'عميل نقدي';
+    } else if (invoice.paymentType === 'آجل') {
+        customerType = 'عميل آجل';
+    }
+
     return `
         <div class="invoice-box">
             <div class="header">
                 <h3>${settings.companyName || ''}</h3>
                 <p>${settings.companyAddress || ''}</p>
                 <p>${settings.companyPhone || ''}</p>
-                <p>التاريخ: ${new Date(invoice.date).toLocaleDateString('ar-EG')} | رقم: ${invoice.id}</p>
+                <p>التاريخ: ${formattedDate}</p>
+                <p>الوقت: ${formattedTime}</p>
+                <p>رقم الفاتورة: ${invoice.id}</p>
+                ${customerType ? `<p>${customerType}</p>` : ''}
             </div>
             <h3 class="title">فاتورة بيع</h3>
             <table class="items-table">
