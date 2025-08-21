@@ -4,17 +4,17 @@
   "name": "YSK SALES | لإدارة المبيعات",
   "icons": [
     {
-      "src": "YSK-SALES.png",
+      "src": "/YSK-SALES-V3/YSK-SALES.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "YSK-SALES.png",
+      "src": "/YSK-SALES-V3/YSK-SALES.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/YSK-SALES-V3/",
   "display": "standalone",
   "theme_color": "#1f2937",
   "background_color": "#f3f4f6"
