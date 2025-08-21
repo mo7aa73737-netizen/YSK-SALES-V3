@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YSK Icon Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        .icon-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .icon {
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+        .icon:hover {
+            transform: scale(1.05);
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .download-link {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            font-size: 12px;
+            transition: background 0.3s ease;
+        }
+        .download-link:hover {
+            background: #45a049;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 YSK PWA Icon Generator</h1>
+        <p>مولد أيقونات تطبيق YSK License Manager</p>
+        
+        <button onclick="generateIcons()">توليد الأيقونات</button>
+        <button onclick="downloadAll()">تحميل جميع الأيقونات</button>
+        
+        <div class="icon-preview" id="iconPreview"></div>
+        
+        <div id="downloadLinks"></div>
+    </div>
+
+    <script>
+        const iconSizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const generatedIcons = [];
+
+        function generateIcons() {
+            const preview = document.getElementById('iconPreview');
+            const downloadLinks = document.getElementById('downloadLinks');
+            
+            preview.innerHTML = '';
+            downloadLinks.innerHTML = '';
+            generatedIcons.length = 0;
+
+            iconSizes.forEach(size => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = size;
+                canvas.height = size;
+                
+                // Create gradient background
+                const gradient = ctx.createLinearGradient(0, 0, size, size);
+                gradient.addColorStop(0, '#2563eb');
+                gradient.addColorStop(1, '#1d4ed8');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, size, size);
+                
+                // Add rounded corners
+                ctx.globalCompositeOperation = 'destination-in';
+                ctx.beginPath();
+                ctx.roundRect(0, 0, size, size, size * 0.2);
+                ctx.fill();
+                ctx.globalCompositeOperation = 'source-over';
+                
+                // Add YSK text
+                ctx.fillStyle = 'white';
+                ctx.font = `bold ${size * 0.25}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('YSK', size / 2, size / 2 - size * 0.05);
+                
+                // Add subtitle
+                ctx.font = `${size * 0.12}px Arial`;
+                ctx.fillText('LICENSE', size / 2, size / 2 + size * 0.15);
+                
+                // Add small icon/symbol
+                ctx.beginPath();
+                ctx.arc(size / 2, size / 2 - size * 0.25, size * 0.08, 0, 2 * Math.PI);
+                ctx.fillStyle = '#fbbf24';
+                ctx.fill();
+                
+                // Convert to blob and create download link
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    generatedIcons.push({ size, url, blob });
+                    
+                    // Create preview
+                    const iconItem = document.createElement('div');
+                    iconItem.className = 'icon-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.className = 'icon';
+                    img.style.width = '80px';
+                    img.style.height = '80px';
+                    
+                    const label = document.createElement('div');
+                    label.textContent = `${size}x${size}`;
+                    label.style.fontSize = '12px';
+                    label.style.color = '#666';
+                    
+                    iconItem.appendChild(img);
+                    iconItem.appendChild(label);
+                    preview.appendChild(iconItem);
+                    
+                    // Create download link
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = `icon-${size}x${size}.png`;
+                    downloadLink.className = 'download-link';
+                    downloadLink.textContent = `تحميل ${size}x${size}`;
+                    downloadLinks.appendChild(downloadLink);
+                });
+            });
+        }
+
+        function downloadAll() {
+            if (generatedIcons.length === 0) {
+                alert('يرجى توليد الأيقونات أولاً');
+                return;
+            }
+
+            generatedIcons.forEach(icon => {
+                const link = document.createElement('a');
+                link.href = icon.url;
+                link.download = `icon-${icon.size}x${icon.size}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
+        // Auto-generate icons on page load
+        window.addEventListener('load', () => {
+            setTimeout(generateIcons, 500);
+        });
+    </script>
+</body>
+</html>

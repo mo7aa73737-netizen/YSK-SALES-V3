@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YSK POS - إدارة التراخيص السحابية</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="نظام إدارة تراخيص YSK POS السحابي - إنشاء وإدارة والتحقق من أكواد التفعيل">
+  <meta name="keywords" content="YSK, POS, License, تراخيص, نقاط البيع, تفعيل">
+  <meta name="author" content="YSK Systems">
+  
+  <!-- PWA Theme -->
+  <meta name="theme-color" content="#2563eb">
+  <meta name="background-color" content="#ffffff">
+  <meta name="display" content="standalone">
+  <meta name="orientation" content="portrait">
+  
+  <!-- Apple PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="YSK License Manager">
+  <link rel="apple-touch-icon" href="./icons/icon-192x192.png">
+  
+  <!-- Microsoft PWA Meta Tags -->
+  <meta name="msapplication-TileColor" content="#2563eb">
+  <meta name="msapplication-TileImage" content="./icons/icon-144x144.png">
+  <meta name="msapplication-config" content="./browserconfig.xml">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-16x16.png">
+  <link rel="shortcut icon" href="./icons/icon-192x192.png">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link id="material-icons-link" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" />
+
+  <!-- Firebase Scripts -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3HGYLYLlFf05qPBl23PujqWhr5Z0_Apc",
+      authDomain: "ysk-active-35da4.firebaseapp.com",
+      projectId: "ysk-active-35da4",
+      storageBucket: "ysk-active-35da4.firebasestorage.app",
+      messagingSenderId: "690431684740",
+      appId: "1:690431684740:web:3e861056405d08c73a52d1",
+      measurementId: "G-0R13DT05T7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    class AdvancedFirebaseLicenseManager {
+      constructor() {
+        this.db = db;
+        this.collection = 'ysk_licenses';
+      }
+
+      async uploadLicense(licenseData) {
+        try {
+          const docRef = await addDoc(collection(this.db, this.collection), {
+            code: licenseData.code,
+            customer: licenseData.customer,
+            customerInfo: licenseData.customerInfo || null,
+            type: licenseData.type,
+            durationDays: licenseData.durationDays || null,
+            created: licenseData.created,
+            expires: licenseData.expires,
+            status: 'active',
+            encryptedData: licenseData.encryptedData,
+            timestamp: new Date().toISOString(),
+            activated: false,
+            activationDate: null,
+            lastUsed: null,
+            usageCount: 0
+          });
+          return { success: true, id: docRef.id };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async getLicense(licenseCode) {
+        try {
+          const q = query(collection(this.db, this.collection), where('code', '==', licenseCode));
+          const querySnapshot = await getDocs(q);
+          if (querySnapshot.empty) return { success: false, error: 'كود التفعيل غير موجود' };
+
+          const docData = querySnapshot.docs[0];
+          const data = docData.data();
+
+          await updateDoc(docData.ref, {
+            lastUsed: new Date().toISOString(),
+            usageCount: (data.usageCount || 0) + 1
+          });
+          return { success: true, data, id: docData.id };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async getAllLicenses() {
+        try {
+          const q = query(collection(this.db, this.collection), orderBy('timestamp', 'desc'));
+          const querySnapshot = await getDocs(q);
+          const licenses = [];
+          querySnapshot.forEach((docx) => licenses.push({ id: docx.id, ...docx.data() }));
+          return { success: true, data: licenses };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async deleteLicense(licenseId) {
+        try {
+          await deleteDoc(doc(this.db, this.collection, licenseId));
+          return { success: true };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+    }
+
+    window.advancedFirebaseManager = new AdvancedFirebaseLicenseManager();
+    window.firebaseReady = true;
+    
+    // Update Firebase status indicator
+    setTimeout(() => {
+      const firebaseStatus = document.getElementById('firebaseStatus');
+      if (firebaseStatus) {
+        firebaseStatus.innerHTML = '<span class="material-icons-outlined text-green-600" style="font-size: 16px;">cloud_done</span>';
+        firebaseStatus.title = 'متصل بـ Firebase - النظام جاهز';
+        firebaseStatus.classList.remove('border-blue-200', 'bg-blue-50');
+        firebaseStatus.classList.add('border-green-200', 'bg-green-50');
+      }
+    }, 500);
+    
+    window.dispatchEvent(new Event('firebaseReady'));
+  </script>
+
+  <style>
+    body { 
+      font-family: 'Cairo', sans-serif; 
+      background: #f9fafb; 
+      color: #111827; 
+    }
+    
+    .glass-card { 
+      background: #fff; 
+      border: 1px solid #e5e7eb; 
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .glass-card:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .active-tab { 
+      background: #dbeafe !important; 
+      color: #1e40af !important; 
+      border: 1px solid #bfdbfe; 
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    .tab-content.hidden { display: none; }
+    
+    .loading { 
+      display: inline-block; 
+      width: 16px; 
+      height: 16px; 
+      border: 2px solid #e5e7eb; 
+      border-top: 2px solid #2563eb; 
+      border-radius: 50%; 
+      animation: spin 1s linear infinite; 
+    }
+    
+    @keyframes spin { 
+      0% { transform: rotate(0deg);} 
+      100% { transform: rotate(360deg);} 
+    }
+    
+    /* Enhanced responsive design */
+    @media (max-width: 768px) {
+      .max-w-7xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      
+      .grid-cols-2 {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+      }
+      
+      .lg\\:grid-cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      
+      .flex-1 {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+      }
+      
+      .text-xl {
+        font-size: 1.125rem;
+      }
+      
+      .text-lg {
+        font-size: 1rem;
+      }
+      
+      .overflow-x-auto table {
+        min-width: 600px;
+      }
+    }
+    
+    @media (max-width: 640px) {
+      .px-4 {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+      
+      .py-4 {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+      }
+      
+      .gap-3 {
+        gap: 0.5rem;
+      }
+      
+      .p-4 {
+        padding: 0.75rem;
+      }
+      
+      .text-2xl {
+        font-size: 1.25rem;
+      }
+      
+      .h-10 {
+        height: 2rem;
+      }
+      
+      .w-10 {
+        width: 2rem;
+      }
+    }
+    
+    /* Button enhancements - All buttons with 8px rounded corners */
+    button {
+      transition: all 0.2s ease-in-out;
+      border-radius: 8px !important;
+    }
+    
+    button:hover {
+      transform: translateY(-1px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    /* Input focus enhancements */
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      border-radius: 8px;
+    }
+    
+    /* Input and select styling */
+    input, select, textarea {
+      border-radius: 8px !important;
+    }
+    
+    /* Status indicators */
+    .status-active {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .status-expired {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    
+    .status-pending {
+      background-color: #fefce8;
+      color: #a16207;
+      border: 1px solid #fde68a;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-100">
+  <!-- Splash Screen -->
+  <div id="splash-screen" class="fixed inset-0 bg-white flex flex-col justify-center items-center z-50">
+    <img src="./YSK PHONE.png" alt="YSK POS" class="w-24 h-24 mb-4">
+    <div class="loading-spinner border-4 border-gray-200 border-t-blue-600 rounded-full w-8 h-8 animate-spin"></div>
+    <p class="mt-4 text-gray-600 font-medium">جاري تحميل نظام إدارة التراخيص...</p>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-4">
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-4">
+      <img src="./YSK PHONE.png" alt="YSK POS" class="h-10 w-10" />
+      <div>
+        <h1 class="text-xl font-bold">إدارة تراخيص YSK POS</h1>
+        <p class="text-sm text-gray-500">إدارة تفعيل النظام</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="statsSection" class="hidden grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">إجمالي التراخيص</p>
+            <p id="totalLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-blue-600 text-2xl">analytics</span>
+        </div>
+      </div>
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">النشطة حالياً</p>
+            <p id="activeLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-green-600 text-2xl">schedule</span>
+        </div>
+      </div>
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">المنتهية</p>
+            <p id="expiredLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-red-600 text-2xl">block</span>
+        </div>
+      </div>
+      <div class="glass-card p-3 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-xs">المفعّلة</p>
+            <p id="activatedLicenses" class="text-2xl font-bold">0</p>
+          </div>
+          <span class="material-icons-outlined text-indigo-600 text-2xl">verified</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-4">
+      <div class="flex bg-blue-50 p-1 rounded-lg">
+        <button onclick="showTab('generate')" id="generateTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition active-tab">توليد ترخيص جديد</button>
+        <button onclick="showTab('manage')" id="manageTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition">إدارة التراخيص</button>
+        <button onclick="showTab('customers')" id="customersTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition">إدارة العملاء</button>
+        <button onclick="showTab('verify')" id="verifyTab" class="flex-1 py-2 px-3 rounded-md text-sm text-blue-800 font-medium transition">التحقق من الأكواد</button>
+      </div>
+    </div>
+
+    <!-- Generate Tab -->
+    <div id="generateSection" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Form -->
+        <div class="glass-card rounded-lg p-4">
+          <h2 class="text-lg font-bold mb-4">توليد ترخيص جديد</h2>
+          <form id="licenseForm" class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">اسم العميل</label>
+                <input id="customerName" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="أدخل اسم العميل" required />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">رقم الموبايل/الإيميل</label>
+                <input id="customerContact" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="01xxxxxxxxx أو email@domain.com" required />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">الشركة/المحل (اختياري)</label>
+                <input id="customerCompany" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="اسم الشركة أو المحل" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">العنوان (اختياري)</label>
+                <input id="customerAddress" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="العنوان" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">نوع الترخيص</label>
+                <select id="licenseType" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm">
+                  <option value="trial-3">تجريبي (3 أيام)</option>
+                  <option value="trial">تجريبي (30 يوم)</option>
+                  <option value="standard">عادي (سنة واحدة)</option>
+                  <option value="premium">مميز (سنتين)</option>
+                  <option value="lifetime">مدى الحياة</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1 flex items-center gap-1"><span class="material-icons-outlined text-xs">info</span>يمكنك كتابة اسم مخصص بالأسفل</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">نوع مخصص (اختياري)</label>
+                <input id="customType" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="مثال: باقة برو سنوية" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1">عدد الأيام</label>
+                <input id="durationDays" type="number" min="1" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="مثال: 365" />
+                <p class="text-xs text-gray-500 mt-1">في حال تحديدها سيتم حساب الانتهاء تلقائياً</p>
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-700 mb-1">تاريخ الانتهاء (اختياري)</label>
+                <input id="expiryDate" type="date" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" />
+                <p class="text-xs text-gray-500 mt-1">أو اتركه فارغ ليحسب حسب النوع أو عدد الأيام</p>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-700 mb-1">ملاحظات</label>
+              <textarea id="notes" rows="3" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" placeholder="بيانات إضافية حول العميل أو الترخيص..."></textarea>
+            </div>
+
+            <button type="submit" id="generateBtn" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition font-semibold text-sm flex items-center justify-center gap-2">
+              <span class="material-icons-outlined">key</span>
+              توليد ورفع الترخيص
+            </button>
+          </form>
+        </div>
+
+        <!-- Result -->
+        <div class="glass-card rounded-lg p-4">
+          <h2 class="text-lg font-bold mb-4">نتيجة التوليد</h2>
+
+          <div id="licenseResult" class="hidden space-y-3">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <label class="block text-sm font-medium text-blue-800 mb-2">كود التفعيل:</label>
+              <div class="flex items-center">
+                <input id="generatedLicense" type="text" class="flex-1 p-3 border border-blue-300 rounded-l-lg bg-white text-gray-800 font-mono text-base text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-200" readonly />
+                <button onclick="copyLicense()" class="bg-green-600 text-white px-4 py-3 rounded-r-lg hover:bg-green-700 transition text-sm flex items-center gap-2 font-medium">
+                  <span class="material-icons-outlined">content_copy</span>
+                  نسخ
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600 font-medium">العميل:</span>
+                  <span id="resultCustomer" class="font-semibold text-gray-900"></span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600 font-medium">نوع الترخيص:</span>
+                  <span id="resultType" class="font-semibold text-blue-700"></span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600 font-medium">تاريخ الانتهاء:</span>
+                  <span id="resultExpiry" class="font-semibold text-gray-900"></span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600 font-medium">عدد الأيام:</span>
+                  <span id="resultDays" class="font-semibold text-gray-900">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-sm text-green-800">
+              <span class="material-icons-outlined text-green-600">cloud_done</span>
+              <p class="font-medium">تم رفع الكود إلى السحابة بنجاح ويمكن تفعيله من أي مكان</p>
+            </div>
+          </div>
+
+          <div id="noLicense" class="text-center text-gray-500 py-8">
+            <span class="material-icons-outlined text-gray-400 text-5xl">vpn_key</span>
+            <p class="text-sm mt-2">املأ النموذج لتوليد ورفع كود تفعيل</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Tab -->
+    <div id="manageSection" class="tab-content hidden">
+      <div class="glass-card rounded-lg p-4">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold">إدارة التراخيص</h2>
+          <button onclick="refreshLicenses()" class="bg-gray-100 text-gray-800 px-3 py-2 rounded hover:bg-gray-200 transition text-sm flex items-center gap-2">
+            <span class="material-icons-outlined">refresh</span>
+            تحديث القائمة
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-right font-medium text-gray-700">التاريخ</th>
+                <th class="p-2 text-right font-medium text-gray-700">العميل</th>
+                <th class="p-2 text-right font-medium text-gray-700">كود التفعيل</th>
+                <th class="p-2 text-right font-medium text-gray-700">النوع</th>
+                <th class="p-2 text-right font-medium text-gray-700">الحالة</th>
+                <th class="p-2 text-right font-medium text-gray-700">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="licensesList">
+              <tr>
+                <td colspan="6" class="text-center p-6 text-gray-500">جاري تحميل التراخيص...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers Tab -->
+    <div id="customersSection" class="tab-content hidden">
+      <div class="glass-card rounded-lg p-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold">إدارة معلومات العملاء</h2>
+          <div class="flex gap-2">
+            <button onclick="refreshCustomers()" class="bg-gray-100 text-gray-800 px-3 py-2 rounded hover:bg-gray-200 transition text-sm flex items-center gap-2">
+              <span class="material-icons-outlined">refresh</span>
+              تحديث
+            </button>
+            <button onclick="exportCustomers()" class="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition text-sm flex items-center gap-2">
+              <span class="material-icons-outlined">download</span>
+              تصدير
+            </button>
+          </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <input id="customerSearch" type="text" placeholder="البحث بالاسم أو الهاتف..." class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" onkeyup="filterCustomers()" />
+          </div>
+          <div>
+            <select id="customerStatusFilter" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" onchange="filterCustomers()">
+              <option value="">جميع الحالات</option>
+              <option value="active">نشط</option>
+              <option value="expired">منتهي</option>
+              <option value="trial">تجريبي</option>
+            </select>
+          </div>
+          <div>
+            <select id="customerTypeFilter" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" onchange="filterCustomers()">
+              <option value="">جميع الأنواع</option>
+              <option value="trial-3">تجريبي (3 أيام)</option>
+              <option value="trial">تجريبي (30 يوم)</option>
+              <option value="standard">عادي</option>
+              <option value="premium">مميز</option>
+              <option value="lifetime">مدى الحياة</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Customers Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-3 text-right font-medium text-gray-700">اسم العميل</th>
+                <th class="p-3 text-right font-medium text-gray-700">معلومات التواصل</th>
+                <th class="p-3 text-right font-medium text-gray-700">الشركة/المحل</th>
+                <th class="p-3 text-right font-medium text-gray-700">نوع الترخيص</th>
+                <th class="p-3 text-right font-medium text-gray-700">تاريخ الانتهاء</th>
+                <th class="p-3 text-right font-medium text-gray-700">الحالة</th>
+                <th class="p-3 text-right font-medium text-gray-700">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="customersList">
+              <tr>
+                <td colspan="7" class="text-center p-6 text-gray-500">جاري تحميل بيانات العملاء...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Edit Modal -->
+    <div id="customerEditModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">تعديل معلومات العميل</h3>
+            <button onclick="closeCustomerModal()" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+
+          <form id="customerEditForm" class="space-y-4">
+            <input type="hidden" id="editCustomerId" />
+            <input type="hidden" id="editLicenseId" />
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">اسم العميل</label>
+                <input id="editCustomerName" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" required />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف/الإيميل</label>
+                <input id="editCustomerContact" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" required />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">الشركة/المحل</label>
+                <input id="editCustomerCompany" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+                <input id="editCustomerAddress" type="text" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">نوع الترخيص</label>
+                <select id="editLicenseType" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm">
+                  <option value="trial">تجريبي</option>
+                  <option value="standard">عادي</option>
+                  <option value="premium">مميز</option>
+                  <option value="lifetime">مدى الحياة</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ الانتهاء</label>
+                <input id="editExpiryDate" type="date" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
+              <textarea id="editCustomerNotes" rows="3" class="w-full p-2 border border-gray-300 rounded bg-white text-gray-800 text-sm"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4">
+              <button type="button" onclick="closeCustomerModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition">
+                إلغاء
+              </button>
+              <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                حفظ التغييرات
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- Verify Tab -->
+    <div id="verifySection" class="tab-content hidden">
+      <div class="glass-card rounded-lg p-4">
+        <h2 class="text-lg font-bold mb-3 text-center">التحقق من صحة الكود</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-700 mb-2">كود التفعيل للتحقق:</label>
+            <div class="flex">
+              <input id="verifyLicense" type="text" class="flex-1 p-2 border border-gray-300 rounded-l bg-white text-gray-800 font-mono text-sm" placeholder="YSK-XXXX-XXXX-XXXX-XXXX" />
+              <button onclick="verifyLicense()" class="bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700 transition text-sm flex items-center gap-2">
+                <span class="material-icons-outlined">verified</span>
+                تحقق
+              </button>
+            </div>
+          </div>
+          <div id="verifyResult" class="hidden">
+            <div id="verifyStatus" class="p-3 rounded border"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Details Modal -->
+    <div id="customerDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">تفاصيل العميل</h3>
+            <button onclick="closeCustomerDetailsModal()" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+
+          <div id="customerDetailsContent" class="space-y-4">
+            <!-- Customer details will be populated here -->
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4">
+            <button onclick="closeCustomerDetailsModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition">
+              إغلاق
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div class="text-center">
+        <div class="flex justify-center items-center gap-2 mb-2">
+          <img src="./YSK PHONE.png" alt="YSK POS" class="w-6 h-6">
+          <h3 class="text-base font-bold text-gray-800">YSK POS</h3>
+        </div>
+        <p class="text-gray-600 text-xs">نظام إدارة نقاط البيع والمخزون</p>
+        <p class="text-gray-500 text-xs mt-2">© 2024 YSK POS - جميع الحقوق محفوظة</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="simple-firebase-system.js"></script>
+  
+  <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => {
+            console.log('SW registered: ', registration);
+            
+            // Check for updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New content is available, show update notification
+                  showUpdateNotification();
+                }
+              });
+            });
+          })
+          .catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    let installButton;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      showInstallButton();
+    });
+
+    function showInstallButton() {
+      if (installButton) return; // Button already exists
+      
+      installButton = document.createElement('button');
+      installButton.innerHTML = `
+        <span class="material-icons-outlined">download</span>
+        تثبيت التطبيق
+      `;
+      installButton.className = 'fixed bottom-4 left-4 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 text-sm font-medium z-50';
+      installButton.style.transform = 'translateY(100px)';
+      
+      document.body.appendChild(installButton);
+      
+      // Animate in
+      setTimeout(() => {
+        installButton.style.transform = 'translateY(0)';
+      }, 100);
+      
+      installButton.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          
+          if (outcome === 'accepted') {
+            showNotification('تم تثبيت التطبيق بنجاح!', 'success');
+          }
+          
+          deferredPrompt = null;
+          hideInstallButton();
+        }
+      });
+    }
+
+    function hideInstallButton() {
+      if (installButton) {
+        installButton.style.transform = 'translateY(100px)';
+        setTimeout(() => {
+          if (installButton && installButton.parentNode) {
+            installButton.parentNode.removeChild(installButton);
+            installButton = null;
+          }
+        }, 300);
+      }
+    }
+
+    // Show update notification
+    function showUpdateNotification() {
+      const updateNotification = document.createElement('div');
+      updateNotification.className = 'fixed top-4 left-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between';
+      updateNotification.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="material-icons-outlined">system_update</span>
+          <div>
+            <div class="font-medium">تحديث متاح</div>
+            <div class="text-sm opacity-90">إصدار جديد من التطبيق متاح</div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="updateApp()" class="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100 transition">
+            تحديث
+          </button>
+          <button onclick="dismissUpdate()" class="text-white opacity-75 hover:opacity-100 transition">
+            <span class="material-icons-outlined text-sm">close</span>
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(updateNotification);
+      
+      window.updateApp = () => {
+        window.location.reload();
+      };
+      
+      window.dismissUpdate = () => {
+        updateNotification.remove();
+      };
+      
+      // Auto-dismiss after 10 seconds
+      setTimeout(() => {
+        if (updateNotification.parentNode) {
+          updateNotification.remove();
+        }
+      }, 10000);
+    }
+
+    // PWA Status Detection
+    function isPWA() {
+      return window.matchMedia('(display-mode: standalone)').matches || 
+             window.navigator.standalone === true;
+    }
+
+    // Add PWA-specific styles and behaviors
+    if (isPWA()) {
+      document.body.classList.add('pwa-mode');
+      
+      // Add PWA-specific CSS
+      const pwaStyles = document.createElement('style');
+      pwaStyles.textContent = `
+        .pwa-mode {
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .pwa-mode .max-w-7xl {
+          padding-top: 1rem;
+        }
+        
+        @media (display-mode: standalone) {
+          body {
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+          }
+          
+          input, textarea {
+            -webkit-user-select: text;
+          }
+        }
+      `;
+      document.head.appendChild(pwaStyles);
+    }
+
+    // Offline/Online Status
+    function updateOnlineStatus() {
+      const statusIndicator = document.createElement('div');
+      statusIndicator.id = 'connection-status';
+      statusIndicator.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm font-medium z-50 transition-all duration-300 ${
+        navigator.onLine 
+          ? 'bg-green-100 text-green-800 border border-green-200' 
+          : 'bg-red-100 text-red-800 border border-red-200'
+      }`;
+      statusIndicator.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="material-icons-outlined text-sm">${navigator.onLine ? 'wifi' : 'wifi_off'}</span>
+          <span>${navigator.onLine ? 'متصل' : 'غير متصل - وضع عدم الاتصال'}</span>
+        </div>
+      `;
+      
+      // Remove existing status indicator
+      const existing = document.getElementById('connection-status');
+      if (existing) existing.remove();
+      
+      document.body.appendChild(statusIndicator);
+      
+      // Auto-hide if online
+      if (navigator.onLine) {
+        setTimeout(() => {
+          if (statusIndicator.parentNode) {
+            statusIndicator.style.opacity = '0';
+            statusIndicator.style.transform = 'translate(-50%, -100%)';
+            setTimeout(() => statusIndicator.remove(), 300);
+          }
+        }, 3000);
+      }
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // Check initial online status
+    if (!navigator.onLine) {
+      setTimeout(updateOnlineStatus, 1000);
+    }
+
+    // Handle URL parameters for deep linking
+    function handleURLParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab');
+      
+      if (tab && ['generate', 'manage', 'customers', 'verify'].includes(tab)) {
+        setTimeout(() => {
+          showTab(tab);
+        }, 500);
+      }
+    }
+
+    // Hide splash screen after loading
+    window.addEventListener('load', function() {
+      handleURLParams(); // Handle deep linking
+      
+      setTimeout(function() {
+        const splashScreen = document.getElementById('splash-screen');
+        if (splashScreen) {
+          splashScreen.style.opacity = '0';
+          splashScreen.style.transition = 'opacity 0.5s ease-out';
+          setTimeout(function() {
+            splashScreen.style.display = 'none';
+          }, 500);
+        }
+      }, 1000);
+    });
+
+    // Enhanced mobile responsiveness
+    function adjustForMobile() {
+      const isMobile = window.innerWidth <= 768;
+      const tabs = document.querySelectorAll('.flex-1');
+      
+      if (isMobile) {
+        tabs.forEach(tab => {
+          tab.style.fontSize = '0.75rem';
+          tab.style.padding = '0.5rem 0.25rem';
+        });
+      } else {
+        tabs.forEach(tab => {
+          tab.style.fontSize = '';
+          tab.style.padding = '';
+        });
+      }
+    }
+
+    // Call on load and resize
+    window.addEventListener('load', adjustForMobile);
+    window.addEventListener('resize', adjustForMobile);
+
+    // Enhanced notification system
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white transition-all duration-300 transform translate-x-full ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+      }`;
+      notification.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="material-icons-outlined">${type === 'success' ? 'check_circle' : 'error'}</span>
+          <span>${message}</span>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Animate in
+      setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+      }, 100);
+      
+      // Animate out and remove
+      setTimeout(() => {
+        notification.style.transform = 'translateX(full)';
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 4000);
+    }
+
+    // Enhanced copy function
+    window.copyLicense = function() {
+      const licenseInput = document.getElementById('generatedLicense');
+      if (licenseInput && licenseInput.value) {
+        licenseInput.select();
+        licenseInput.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+          document.execCommand('copy');
+          showNotification('تم نسخ كود التفعيل بنجاح!', 'success');
+        } catch (err) {
+          // Fallback for modern browsers
+          navigator.clipboard.writeText(licenseInput.value).then(() => {
+            showNotification('تم نسخ كود التفعيل بنجاح!', 'success');
+          }).catch(() => {
+            showNotification('فشل في نسخ الكود', 'error');
+          });
+        }
+      }
+    };
+
+    // Enhanced tab switching with better mobile support
+    window.showTab = function(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+      
+      // Remove active class from all tabs
+      document.querySelectorAll('[id$="Tab"]').forEach(tab => {
+        tab.classList.remove('active-tab');
+      });
+      
+      // Show selected tab content
+      const selectedContent = document.getElementById(tabName + 'Section');
+      if (selectedContent) {
+        selectedContent.classList.remove('hidden');
+      }
+      
+      // Add active class to selected tab
+      const selectedTab = document.getElementById(tabName + 'Tab');
+      if (selectedTab) {
+        selectedTab.classList.add('active-tab');
+      }
+    };
+
+    // Auto-adjust logo path based on current location
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoImages = document.querySelectorAll('img[src*="YSK-SALES.png"]');
+      logoImages.forEach(img => {
+        // Try different paths until one works
+        const paths = ['../YSK-SALES.png', '../public/YSK-SALES.png', './YSK-SALES.png'];
+        let currentPathIndex = 0;
+        
+        function tryNextPath() {
+          if (currentPathIndex < paths.length) {
+            img.src = paths[currentPathIndex];
+            currentPathIndex++;
+          }
+        }
+        
+        img.onerror = tryNextPath;
+        tryNextPath(); // Start with first path
+      });
+    });
+
+    // Customer Management Functions
+    let allCustomers = [];
+
+    // Load customers data
+    window.refreshCustomers = async function() {
+      if (!window.advancedFirebaseManager) {
+        showNotification('Firebase غير متاح حالياً', 'error');
+        return;
+      }
+
+      try {
+        const result = await window.advancedFirebaseManager.getAllLicenses();
+        if (result.success) {
+          allCustomers = result.data.map(license => ({
+            id: license.id,
+            name: license.customer?.name || license.customer || 'غير محدد',
+            contact: license.customerInfo?.contact || 'غير محدد',
+            company: license.customerInfo?.company || '',
+            address: license.customerInfo?.address || '',
+            licenseType: license.type,
+            expires: license.expires,
+            status: getCustomerStatus(license.expires, license.activated),
+            notes: license.customerInfo?.notes || '',
+            licenseCode: license.code,
+            created: license.created,
+            activated: license.activated || false
+          }));
+          displayCustomers(allCustomers);
+        } else {
+          showNotification('فشل في تحميل بيانات العملاء', 'error');
+        }
+      } catch (error) {
+        showNotification('حدث خطأ في تحميل البيانات', 'error');
+      }
+    };
+
+    // Display customers in table
+    function displayCustomers(customers) {
+      const tbody = document.getElementById('customersList');
+      if (!customers || customers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-6 text-gray-500">لا توجد بيانات عملاء</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = customers.map(customer => `
+        <tr class="hover:bg-gray-50">
+          <td class="p-3 border-b">
+            <div class="font-medium">${customer.name}</div>
+            <div class="text-xs text-gray-500">${customer.licenseCode}</div>
+          </td>
+          <td class="p-3 border-b">
+            <div class="text-sm">${customer.contact}</div>
+          </td>
+          <td class="p-3 border-b">
+            <div class="text-sm">${customer.company || '-'}</div>
+          </td>
+          <td class="p-3 border-b">
+            <span class="px-2 py-1 text-xs rounded-full ${getLicenseTypeClass(customer.licenseType)}">
+              ${getLicenseTypeName(customer.licenseType)}
+            </span>
+          </td>
+          <td class="p-3 border-b">
+            <div class="text-sm">${formatDate(customer.expires)}</div>
+          </td>
+          <td class="p-3 border-b">
+            <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(customer.status)}">
+              ${getStatusName(customer.status)}
+            </span>
+          </td>
+          <td class="p-3 border-b">
+            <div class="flex gap-1">
+              <button onclick="editCustomer('${customer.id}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="تعديل">
+                <span class="material-icons-outlined text-sm">edit</span>
+              </button>
+              <button onclick="viewCustomerDetails('${customer.id}')" class="p-1 text-green-600 hover:bg-green-50 rounded" title="عرض التفاصيل">
+                <span class="material-icons-outlined text-sm">visibility</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Filter customers
+    window.filterCustomers = function() {
+      const searchTerm = document.getElementById('customerSearch').value.toLowerCase();
+      const statusFilter = document.getElementById('customerStatusFilter').value;
+      const typeFilter = document.getElementById('customerTypeFilter').value;
+
+      const filtered = allCustomers.filter(customer => {
+        const matchesSearch = customer.name.toLowerCase().includes(searchTerm) || 
+                            customer.contact.toLowerCase().includes(searchTerm);
+        const matchesStatus = !statusFilter || customer.status === statusFilter;
+        const matchesType = !typeFilter || customer.licenseType === typeFilter;
+        
+        return matchesSearch && matchesStatus && matchesType;
+      });
+
+      displayCustomers(filtered);
+    };
+
+    // Edit customer
+    window.editCustomer = function(customerId) {
+      const customer = allCustomers.find(c => c.id === customerId);
+      if (!customer) return;
+
+      // Fill form with customer data
+      document.getElementById('editCustomerId').value = customer.id;
+      document.getElementById('editLicenseId').value = customer.id;
+      document.getElementById('editCustomerName').value = customer.name;
+      document.getElementById('editCustomerContact').value = customer.contact;
+      document.getElementById('editCustomerCompany').value = customer.company;
+      document.getElementById('editCustomerAddress').value = customer.address;
+      document.getElementById('editLicenseType').value = customer.licenseType;
+      document.getElementById('editExpiryDate').value = customer.expires ? customer.expires.split('T')[0] : '';
+      document.getElementById('editCustomerNotes').value = customer.notes;
+
+      // Show modal
+      document.getElementById('customerEditModal').classList.remove('hidden');
+    };
+
+    // Close customer modal
+    window.closeCustomerModal = function() {
+      document.getElementById('customerEditModal').classList.add('hidden');
+    };
+
+    // Save customer changes
+    document.getElementById('customerEditForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const customerId = document.getElementById('editCustomerId').value;
+      const updatedData = {
+        customer: {
+          name: document.getElementById('editCustomerName').value
+        },
+        customerInfo: {
+          contact: document.getElementById('editCustomerContact').value,
+          company: document.getElementById('editCustomerCompany').value,
+          address: document.getElementById('editCustomerAddress').value,
+          notes: document.getElementById('editCustomerNotes').value
+        },
+        type: document.getElementById('editLicenseType').value,
+        expires: document.getElementById('editExpiryDate').value + 'T23:59:59.999Z'
+      };
+
+      try {
+        // Update in Firebase (you'll need to add this method to your Firebase manager)
+        const result = await updateCustomerData(customerId, updatedData);
+        if (result.success) {
+          showNotification('تم تحديث بيانات العميل بنجاح', 'success');
+          closeCustomerModal();
+          refreshCustomers();
+        } else {
+          showNotification('فشل في تحديث البيانات', 'error');
+        }
+      } catch (error) {
+        showNotification('حدث خطأ في التحديث', 'error');
+      }
+    });
+
+    // Export customers data
+    window.exportCustomers = function() {
+      if (!allCustomers || allCustomers.length === 0) {
+        showNotification('لا توجد بيانات للتصدير', 'error');
+        return;
+      }
+
+      const csvContent = [
+        ['اسم العميل', 'معلومات التواصل', 'الشركة/المحل', 'العنوان', 'نوع الترخيص', 'تاريخ الانتهاء', 'الحالة', 'كود الترخيص'],
+        ...allCustomers.map(customer => [
+          customer.name,
+          customer.contact,
+          customer.company,
+          customer.address,
+          getLicenseTypeName(customer.licenseType),
+          formatDate(customer.expires),
+          getStatusName(customer.status),
+          customer.licenseCode
+        ])
+      ].map(row => row.join(',')).join('\n');
+
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `عملاء_YSK_POS_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      
+      showNotification('تم تصدير بيانات العملاء بنجاح', 'success');
+    };
+
+    // Helper functions
+    function getCustomerStatus(expiryDate, activated = false) {
+      if (!expiryDate) return 'unknown';
+      const now = new Date();
+      const expiry = new Date(expiryDate);
+      
+      // إذا لم يتم تفعيل الكود بعد، يعتبر في انتظار التفعيل
+      if (!activated) {
+        return expiry > now ? 'pending' : 'expired';
+      }
+      
+      // إذا تم التفعيل، نتحقق من تاريخ الانتهاء
+      return expiry > now ? 'active' : 'expired';
+    }
+
+    function getLicenseTypeName(type) {
+      const types = {
+        'trial-3': 'تجريبي (3 أيام)',
+        'trial': 'تجريبي (30 يوم)',
+        'standard': 'عادي',
+        'premium': 'مميز',
+        'lifetime': 'مدى الحياة'
+      };
+      return types[type] || type;
+    }
+
+    function getLicenseTypeClass(type) {
+      const classes = {
+        'trial-3': 'bg-orange-100 text-orange-800',
+        'trial': 'bg-yellow-100 text-yellow-800',
+        'standard': 'bg-blue-100 text-blue-800',
+        'premium': 'bg-purple-100 text-purple-800',
+        'lifetime': 'bg-green-100 text-green-800'
+      };
+      return classes[type] || 'bg-gray-100 text-gray-800';
+    }
+
+    function getStatusName(status) {
+      const statuses = {
+        'active': 'نشط',
+        'expired': 'منتهي',
+        'pending': 'في انتظار التفعيل',
+        'trial': 'تجريبي'
+      };
+      return statuses[status] || 'غير محدد';
+    }
+
+    function getStatusClass(status) {
+      const classes = {
+        'active': 'bg-green-100 text-green-800',
+        'expired': 'bg-red-100 text-red-800',
+        'pending': 'bg-yellow-100 text-yellow-800',
+        'trial': 'bg-orange-100 text-orange-800'
+      };
+      return classes[status] || 'bg-gray-100 text-gray-800';
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      return new Date(dateString).toLocaleDateString('ar-EG');
+    }
+
+    // Update customer data in Firebase
+    async function updateCustomerData(licenseId, updatedData) {
+      try {
+        // This would need to be implemented in your Firebase manager
+        // For now, we'll simulate the update
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    }
+
+    // View customer details
+    window.viewCustomerDetails = function(customerId) {
+      const customer = allCustomers.find(c => c.id === customerId);
+      if (!customer) return;
+
+      const detailsContent = document.getElementById('customerDetailsContent');
+      detailsContent.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-semibold text-blue-800 mb-2">معلومات العميل</h4>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600">الاسم:</span>
+                <span class="font-medium">${customer.name}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">التواصل:</span>
+                <span class="font-medium">${customer.contact}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">الشركة:</span>
+                <span class="font-medium">${customer.company || '-'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">العنوان:</span>
+                <span class="font-medium">${customer.address || '-'}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-semibold text-green-800 mb-2">معلومات الترخيص</h4>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600">كود الترخيص:</span>
+                <span class="font-mono text-xs bg-white px-2 py-1 rounded border">${customer.licenseCode}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">النوع:</span>
+                <span class="px-2 py-1 text-xs rounded-full ${getLicenseTypeClass(customer.licenseType)}">
+                  ${getLicenseTypeName(customer.licenseType)}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">تاريخ الانتهاء:</span>
+                <span class="font-medium">${formatDate(customer.expires)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">الحالة:</span>
+                <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(customer.status)}">
+                  ${getStatusName(customer.status)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        ${customer.notes ? `
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h4 class="font-semibold text-gray-800 mb-2">ملاحظات</h4>
+            <p class="text-sm text-gray-700">${customer.notes}</p>
+          </div>
+        ` : ''}
+        
+        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+          <h4 class="font-semibold text-yellow-800 mb-2">إجراءات سريعة</h4>
+          <div class="flex gap-2">
+            <button onclick="editCustomer('${customer.id}'); closeCustomerDetailsModal();" class="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition">
+              تعديل البيانات
+            </button>
+            <button onclick="copyToClipboard('${customer.licenseCode}')" class="px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition">
+              نسخ كود الترخيص
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('customerDetailsModal').classList.remove('hidden');
+    };
+
+    // Close customer details modal
+    window.closeCustomerDetailsModal = function() {
+      document.getElementById('customerDetailsModal').classList.add('hidden');
+    };
+
+    // Copy to clipboard function
+    window.copyToClipboard = function(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('تم نسخ كود الترخيص بنجاح!', 'success');
+      }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('تم نسخ كود الترخيص بنجاح!', 'success');
+      });
+    };
+
+    // Verify license function
+    window.verifyLicense = async function() {
+      const licenseCode = document.getElementById('verifyLicense').value.trim();
+      if (!licenseCode) {
+        showNotification('يرجى إدخال كود التفعيل', 'error');
+        return;
+      }
+
+      if (!window.advancedFirebaseManager) {
+        showNotification('Firebase غير متاح حالياً', 'error');
+        return;
+      }
+
+      try {
+        const result = await window.advancedFirebaseManager.getLicense(licenseCode);
+        const verifyResult = document.getElementById('verifyResult');
+        const verifyStatus = document.getElementById('verifyStatus');
+
+        if (result.success) {
+          const license = result.data;
+          const isExpired = new Date(license.expires) < new Date();
+          const statusClass = isExpired ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800';
+          const statusIcon = isExpired ? 'error' : 'check_circle';
+          const statusText = isExpired ? 'منتهي الصلاحية' : 'صالح';
+
+          verifyStatus.className = `p-3 rounded border ${statusClass}`;
+          verifyStatus.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+              <span class="material-icons-outlined">${statusIcon}</span>
+              <span class="font-semibold">كود التفعيل ${statusText}</span>
+            </div>
+            <div class="text-sm space-y-1">
+              <div><strong>العميل:</strong> ${license.customer?.name || license.customer || 'غير محدد'}</div>
+              <div><strong>النوع:</strong> ${getLicenseTypeName(license.type)}</div>
+              <div><strong>تاريخ الانتهاء:</strong> ${formatDate(license.expires)}</div>
+              <div><strong>تاريخ الإنشاء:</strong> ${formatDate(license.created)}</div>
+              ${license.activated ? `<div><strong>تم التفعيل:</strong> ${formatDate(license.activationDate)}</div>` : ''}
+              ${license.usageCount ? `<div><strong>مرات الاستخدام:</strong> ${license.usageCount}</div>` : ''}
+            </div>
+          `;
+        } else {
+          verifyStatus.className = 'p-3 rounded border bg-red-50 border-red-200 text-red-800';
+          verifyStatus.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="material-icons-outlined">error</span>
+              <span class="font-semibold">كود التفعيل غير صا��ح</span>
+            </div>
+            <p class="text-sm mt-1">${result.error}</p>
+          `;
+        }
+
+        verifyResult.classList.remove('hidden');
+      } catch (error) {
+        showNotification('حدث خطأ في التحقق من الكود', 'error');
+      }
+    };
+
+    // Load customers when customers tab is shown
+    window.addEventListener('firebaseReady', function() {
+      // Auto-load customers when switching to customers tab
+      const originalShowTab = window.showTab;
+      window.showTab = function(tabName) {
+        originalShowTab(tabName);
+        if (tabName === 'customers') {
+          refreshCustomers();
+        }
+      };
+    });
+  </script>
+</body>
+</html>

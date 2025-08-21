@@ -1,0 +1,67 @@
+{
+  "name": "ysk-license-manager-pwa",
+  "version": "1.0.0",
+  "description": "نظام إدارة تراخيص YSK POS - تطبيق ويب تقدمي (PWA)",
+  "main": "index.html",
+  "homepage": "https://mo7aa73737-netizen.github.io/license-YSK/",
+  "scripts": {
+    "dev": "live-server --port=3001 --open=index.html",
+    "start": "live-server --port=3001 --open=index.html",
+    "build": "echo 'PWA Build complete - Ready for deployment'",
+    "test": "echo 'Testing PWA functionality...'",
+    "deploy": "echo 'Deploying to GitHub Pages via GitHub Actions'",
+    "serve": "live-server --port=8080 --host=0.0.0.0",
+    "icons": "echo 'Open generate-icons.html to create PWA icons'",
+    "validate": "echo 'Validating PWA requirements...'"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "keywords": [
+    "pwa",
+    "progressive-web-app", 
+    "license-management",
+    "activation",
+    "pos",
+    "ysk",
+    "firebase",
+    "offline-first",
+    "service-worker"
+  ],
+  "author": {
+    "name": "YSK Systems",
+    "email": "support@ysk-systems.com",
+    "url": "https://ysk-systems.com"
+  },
+  "license": "Private",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mo7aa73737-netizen/license-YSK.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mo7aa73737-netizen/license-YSK/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "pwa": {
+    "name": "YSK License Manager",
+    "short_name": "YSK License",
+    "description": "نظام إدارة تراخيص YSK POS السحابي",
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "orientation": "portrait",
+    "start_url": "./"
+  }
+}
